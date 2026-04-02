@@ -327,9 +327,17 @@ function updateUrlParams() {
 async function applyUrlParams() {
   const params = getUrlParams();
   
+  // Load reader from URL or localStorage
   if (params.r !== null) {
     elements.readerName.selectedIndex = parseInt(params.r);
+    localStorage.setItem("selectedReaderIndex", params.r);
     updateStoredSurahsList();
+  } else {
+    const savedReaderIndex = localStorage.getItem("selectedReaderIndex");
+    if (savedReaderIndex !== null) {
+      elements.readerName.selectedIndex = parseInt(savedReaderIndex);
+      updateStoredSurahsList();
+    }
   }
   
   if (params.sp !== null) {
@@ -768,6 +776,7 @@ elements.endSurahSelect.addEventListener("change", () => {
   updateUrlParams();
 });
 elements.readerName.addEventListener("change", () => {
+  localStorage.setItem("selectedReaderIndex", elements.readerName.selectedIndex);
   updateStoredSurahsList();
   updateUrlParams();
 });
