@@ -527,7 +527,8 @@ async function downloadAudioSegment(triggerDownload = true) {
     }
 
     showStatus("جاري دمج الآيات...", "info");
-    const mergedBuffer = mergeAudioBuffers(audioContext, audioBuffers);
+    const currentSpeed = parseFloat(document.querySelector(".speed-btn.active")?.dataset.speed || "1");
+    const mergedBuffer = await mergeAudioBuffers(audioContext, audioBuffers, currentSpeed);
     showStatus("جاري ترميز الصوت...", "info");
     const wavBlob = bufferToWave(mergedBuffer);
 
@@ -536,7 +537,6 @@ async function downloadAudioSegment(triggerDownload = true) {
     elements.previewAudio.classList.remove("d-none");
     
     // Apply current speed
-    const currentSpeed = parseFloat(document.querySelector(".speed-btn.active")?.dataset.speed || "1");
     elements.previewAudio.playbackRate = currentSpeed;
 
     if (triggerDownload) {
@@ -561,22 +561,34 @@ async function downloadAudioSegment(triggerDownload = true) {
   }
 }
 
-function mergeAudioBuffers(audioContext, buffers) {
+async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   if (buffers.length === 0) throw new Error("لا توجد ملفات صوتية للدمج");
+  
   const numberOfChannels = buffers[0].numberOfChannels;
   const sampleRate = buffers[0].sampleRate;
-  let totalLength = 0;
-  buffers.forEach((buffer) => { totalLength += buffer.length; });
-
-  const mergedBuffer = audioContext.createBuffer(numberOfChannels, totalLength, sampleRate);
-  let offset = 0;
-  buffers.forEach((buffer) => {
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      mergedBuffer.getChannelData(channel).set(buffer.getChannelData(channel), offset);
-    }
-    offset += buffer.length;
-  });
-  return mergedBuffer;
+  
+  // Calculate total duration at the adjusted speed
+  let totalDuration = 0;
+  buffers.forEach(b => totalDuration += b.duration);
+  
+  // Create OfflineAudioContext to render the audio at the specified speed
+  const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+    numberOfChannels,
+    Math.ceil((totalDuration / speed) * sampleRate),
+    sampleRate
+  );
+  
+  let startTime = 0;
+  for (const buffer of buffers) {
+    const source = offlineCtx.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = speed;
+    source.connect(offlineCtx.destination);
+    source.start(startTime);
+    startTime += (buffer.duration / speed);
+  }
+  
+  return await offlineCtx.startRendering();
 }
 
 function bufferToWave(audioBuffer) {
