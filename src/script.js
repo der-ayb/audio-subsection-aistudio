@@ -14,6 +14,7 @@ function getReaderId() {
   const url = getBaseUrl();
   if (url.includes("yacineee")) return "yacine";
   if (url.includes("ibraheem-aldosry")) return "ibraheem";
+  if (url.includes("alhosary-warsh")) return "alhosary";
   return "default";
 }
 
