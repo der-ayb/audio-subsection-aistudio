@@ -596,26 +596,30 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   // Calculate total duration at the adjusted speed
   let totalDuration = 0;
   buffers.forEach(b => totalDuration += b.duration);
-  
-  // Create OfflineAudioContext to render the audio at the specified speed
-  const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
-    numberOfChannels,
-    Math.ceil((totalDuration / speed) * sampleRate),
-    sampleRate
-  );
-  
-  let startTime = 0;
-  for (const buffer of buffers) {
-    const source = offlineCtx.createBufferSource();
-    source.buffer = buffer;
-    source.playbackRate.value = speed;
-    source.connect(offlineCtx.destination);
-    source.start(startTime);
-    startTime += (buffer.duration / speed);
-  }
-  
-  return await offlineCtx.startRendering();
+  const renderedDuration = totalDuration / speed;
+
+  // Use Tone.Offline for high-quality rendering
+  return await Tone.Offline(async () => {
+    let startTime = 0;
+    
+    for (const buffer of buffers) {
+      // GrainPlayer allows changing speed without changing pitch
+      const player = new Tone.GrainPlayer(buffer).toDestination();
+      
+      // Apply speed (playbackRate)
+      player.playbackRate = speed;
+      
+      // Ensure the grain size and overlap are suitable for speech
+      player.grainSize = 0.1;
+      player.overlap = 0.05;
+      
+      player.start(startTime);
+      startTime += (buffer.duration / speed);
+    }
+  }, renderedDuration, numberOfChannels, sampleRate);
 }
+
+
 
 function bufferToWave(audioBuffer) {
   const numChannels = audioBuffer.numberOfChannels;
