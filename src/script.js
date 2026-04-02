@@ -52,7 +52,8 @@ async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
 }
 
 const elements = {
-  surahSelect: document.getElementById("surahSelect"),
+  startSurahSelect: document.getElementById("startSurahSelect"),
+  endSurahSelect: document.getElementById("endSurahSelect"),
   startAyaSelect: document.getElementById("startAyaSelect"),
   endAyaSelect: document.getElementById("endAyaSelect"),
   downloadBtn: document.getElementById("downloadBtn"),
@@ -256,15 +257,16 @@ async function updateStoredSurahsList() {
 
 async function playStoredSurah(surahNum) {
   try {
-    elements.surahSelect.value = surahNum;
-    loadAyasForSurah();
+    elements.startSurahSelect.value = surahNum;
+    elements.endSurahSelect.value = surahNum;
+    await loadAyasForStartSurah();
+    await loadAyasForEndSurah();
     
     // Select all ayahs in this surah
     const result = db.exec(`SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`);
     if (result.length > 0) {
       const numAyat = result[0].values[0][0];
       elements.startAyaSelect.value = "1";
-      updateEndAyaOptions();
       elements.endAyaSelect.value = numAyat;
       
       // Trigger download/merge and play (without downloading file)
@@ -320,7 +322,8 @@ function loadSurahs() {
   const result = db.exec("SELECT id_sura, sura, num_ayat FROM quran_index ORDER BY id_sura");
 
   if (result.length > 0) {
-    elements.surahSelect.innerHTML = "";
+    elements.startSurahSelect.innerHTML = "";
+    elements.endSurahSelect.innerHTML = "";
     elements.surahCheckboxes.innerHTML = "";
     const rows = result[0].values;
 
@@ -331,7 +334,9 @@ function loadSurahs() {
       option.value = id_sura;
       option.textContent = `${id_sura}. ${sura}`;
       option.dataset.numAyat = num_ayat;
-      elements.surahSelect.appendChild(option);
+      
+      elements.startSurahSelect.appendChild(option.cloneNode(true));
+      elements.endSurahSelect.appendChild(option.cloneNode(true));
 
       const checkboxDiv = document.createElement("div");
       checkboxDiv.className = "surah-checkbox form-check";
@@ -344,13 +349,15 @@ function loadSurahs() {
       elements.surahCheckboxes.appendChild(checkboxDiv);
     });
 
-    elements.surahSelect.value = "1";
-    loadAyasForSurah();
+    elements.startSurahSelect.value = "1";
+    elements.endSurahSelect.value = "1";
+    loadAyasForStartSurah();
+    loadAyasForEndSurah();
   }
 }
 
-function loadAyasForSurah() {
-  const surahId = parseInt(elements.surahSelect.value);
+async function loadAyasForStartSurah() {
+  const surahId = parseInt(elements.startSurahSelect.value);
   if (!surahId || !db) return;
 
   const result = db.exec(`SELECT ayah, text FROM quran_ayat WHERE sura = ${surahId} ORDER BY ayah`);
@@ -368,17 +375,34 @@ function loadAyasForSurah() {
     });
 
     elements.startAyaSelect.value = "1";
-    updateEndAyaOptions();
+    updateEndSurahOptions();
   }
 }
 
-function updateEndAyaOptions() {
+function updateEndSurahOptions() {
+  const startSurah = parseInt(elements.startSurahSelect.value);
+  const currentEndSurah = parseInt(elements.endSurahSelect.value);
+  
+  // Disable surahs before startSurah in endSurahSelect
+  Array.from(elements.endSurahSelect.options).forEach(option => {
+    const surahId = parseInt(option.value);
+    option.disabled = surahId < startSurah;
+  });
+  
+  if (currentEndSurah < startSurah) {
+    elements.endSurahSelect.value = startSurah;
+    loadAyasForEndSurah();
+  }
+}
+
+async function loadAyasForEndSurah() {
+  const startSurah = parseInt(elements.startSurahSelect.value);
+  const endSurah = parseInt(elements.endSurahSelect.value);
   const startAya = parseInt(elements.startAyaSelect.value);
-  const surahId = parseInt(elements.surahSelect.value);
+  
+  if (!endSurah || !db) return;
 
-  if (!startAya || !surahId || !db) return;
-
-  const result = db.exec(`SELECT ayah, text FROM quran_ayat WHERE sura = ${surahId} AND ayah >= ${startAya} ORDER BY ayah`);
+  const result = db.exec(`SELECT ayah, text FROM quran_ayat WHERE sura = ${endSurah} ORDER BY ayah`);
 
   if (result.length > 0) {
     elements.endAyaSelect.innerHTML = "";
@@ -389,9 +413,25 @@ function updateEndAyaOptions() {
       const option = document.createElement("option");
       option.value = ayah;
       option.textContent = `${ayah}. ${text}`;
+      
+      // If same surah, disable ayas before startAya
+      if (startSurah === endSurah && ayah < startAya) {
+        option.disabled = true;
+      }
+      
       elements.endAyaSelect.appendChild(option);
     });
 
+    // Set default end aya
+    if (startSurah === endSurah) {
+      if (parseInt(elements.endAyaSelect.value) < startAya) {
+        elements.endAyaSelect.value = startAya;
+      }
+    } else {
+      // Default to last aya of end surah if it's a different surah? 
+      // Or just keep current if valid.
+    }
+    
     elements.downloadBtn.disabled = false;
   }
 }
@@ -483,11 +523,12 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
 });
 
 async function downloadAudioSegment(triggerDownload = true) {
-  const surahNumber = parseInt(elements.surahSelect.value);
+  const startSurah = parseInt(elements.startSurahSelect.value);
+  const endSurah = parseInt(elements.endSurahSelect.value);
   const startAya = parseInt(elements.startAyaSelect.value);
   const endAya = parseInt(elements.endAyaSelect.value);
 
-  if (!surahNumber || !startAya || !endAya) {
+  if (!startSurah || !endSurah || !startAya || !endAya) {
     showStatus("الرجاء اختيار جميع الحقول", "danger");
     return;
   }
@@ -497,28 +538,46 @@ async function downloadAudioSegment(triggerDownload = true) {
     elements.previewAudio.classList.add("d-none");
     elements.infoBox.classList.add("d-none");
 
-    const ayahCount = endAya - startAya + 1;
-    showInfo(`جاري تحميل ${ayahCount} آية...`);
-    showStatus("جاري تحميل الآيات...", "info");
-
     const audioBuffers = [];
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    for (let ayah = startAya; ayah <= endAya; ayah++) {
-      let arrayBuffer = await getAyahFromCache(surahNumber, ayah);
+    // Collect all ayahs across surahs
+    const ayahsToFetch = [];
+    for (let s = startSurah; s <= endSurah; s++) {
+      const sStart = (s === startSurah) ? startAya : 1;
+      let sEnd;
+      if (s === endSurah) {
+        sEnd = endAya;
+      } else {
+        const result = db.exec(`SELECT num_ayat FROM quran_index WHERE id_sura = ${s}`);
+        sEnd = result[0].values[0][0];
+      }
+      
+      for (let a = sStart; a <= sEnd; a++) {
+        ayahsToFetch.push({ surah: s, ayah: a });
+      }
+    }
+
+    const ayahCount = ayahsToFetch.length;
+    showInfo(`جاري تحميل ${ayahCount} آية...`);
+    showStatus("جاري تحميل الآيات...", "info");
+
+    for (const item of ayahsToFetch) {
+      const { surah, ayah } = item;
+      let arrayBuffer = await getAyahFromCache(surah, ayah);
 
       if (!arrayBuffer) {
         if (!navigator.onLine) {
-          showStatus(`لا يوجد اتصال بالإنترنت والآية ${ayah} غير محفوظة`, "danger");
+          showStatus(`لا يوجد اتصال بالإنترنت والآية ${ayah} من السورة ${surah} غير محفوظة`, "danger");
           elements.downloadBtn.disabled = false;
           return;
         }
 
-        const ayahId = `${String(surahNumber).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
+        const ayahId = `${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
         const audioUrl = `${getBaseUrl()}${ayahId}.mp3`;
 
         const response = await fetchWithRetry(audioUrl);
-        if (!response.ok) throw new Error(`فشل تحميل الآية ${ayah}`);
+        if (!response.ok) throw new Error(`فشل تحميل الآية ${ayah} من السورة ${surah}`);
         arrayBuffer = await response.arrayBuffer();
       }
 
@@ -543,7 +602,10 @@ async function downloadAudioSegment(triggerDownload = true) {
     if (triggerDownload) {
       const a = document.createElement("a");
       a.href = previewUrl;
-      a.download = `quran_surah${surahNumber}_ayah${startAya}-${endAya}.wav`;
+      const filename = (startSurah === endSurah) 
+        ? `quran_surah${startSurah}_ayah${startAya}-${endAya}.wav`
+        : `quran_surah${startSurah}aya${startAya}_to_surah${endSurah}aya${endAya}.wav`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -632,9 +694,10 @@ function bufferToWave(audioBuffer) {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
-elements.surahSelect.addEventListener("change", loadAyasForSurah);
+elements.startSurahSelect.addEventListener("change", loadAyasForStartSurah);
+elements.endSurahSelect.addEventListener("change", loadAyasForEndSurah);
 elements.readerName.addEventListener("change", updateStoredSurahsList);
-elements.startAyaSelect.addEventListener("change", updateEndAyaOptions);
+elements.startAyaSelect.addEventListener("change", loadAyasForEndSurah);
 elements.downloadBtn.addEventListener("click", downloadAudioSegment);
 
 // Speed control listeners
