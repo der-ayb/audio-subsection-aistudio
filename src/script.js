@@ -1,9 +1,21 @@
 let db = null;
 const DB_NAME = "quran_audio_cache";
-const DB_VERSION = 1;
-const BASE_URL = "https://raw.githubusercontent.com/brmhmh/yacineee/refs/heads/upup/";
+const DB_VERSION = 2; // Incremented version to handle schema change (readerId in ayahId)
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second base delay
+
+// Helper to get current reader's base URL
+function getBaseUrl() {
+  return elements.readerName ? elements.readerName.value : "https://raw.githubusercontent.com/brmhmh/yacineee/refs/heads/upup/";
+}
+
+// Helper to get reader ID from URL
+function getReaderId() {
+  const url = getBaseUrl();
+  if (url.includes("yacineee")) return "yacine";
+  if (url.includes("ibraheem-aldosry")) return "ibraheem";
+  return "default";
+}
 
 // Helper for fetching with retry and timeout
 async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
@@ -52,6 +64,7 @@ const elements = {
   storedCount: document.getElementById("storedCount"),
   surahCheckboxes: document.getElementById("surahCheckboxes"),
   onlineIndicator: document.getElementById("onlineIndicator"),
+  readerName: document.getElementById("readerName"),
   selectAllBtn: document.getElementById("selectAllBtn"),
   deselectAllBtn: document.getElementById("deselectAllBtn"),
   clearAllBtn: document.getElementById("clearAllBtn"),
@@ -117,7 +130,8 @@ async function openDB() {
 async function saveAyahToCache(surah, ayah, arrayBuffer) {
   try {
     const db = await openDB();
-    const ayahId = `${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
+    const readerId = getReaderId();
+    const ayahId = `${readerId}_${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["ayahs"], "readwrite");
       const store = transaction.objectStore("ayahs");
@@ -129,7 +143,7 @@ async function saveAyahToCache(surah, ayah, arrayBuffer) {
       };
       transaction.onabort = () => reject(new Error("تم إلغاء عملية الحفظ."));
 
-      store.put({ ayahId, surah, ayah, data: arrayBuffer });
+      store.put({ ayahId, readerId, surah, ayah, data: arrayBuffer });
     });
   } catch (error) {
     console.error("saveAyahToCache error:", error);
@@ -140,7 +154,8 @@ async function saveAyahToCache(surah, ayah, arrayBuffer) {
 async function getAyahFromCache(surah, ayah) {
   try {
     const db = await openDB();
-    const ayahId = `${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
+    const readerId = getReaderId();
+    const ayahId = `${readerId}_${String(surah).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["ayahs"], "readonly");
       const store = transaction.objectStore("ayahs");
@@ -162,13 +177,14 @@ async function getAyahFromCache(surah, ayah) {
 async function getStoredSurahs() {
   try {
     const db = await openDB();
+    const readerId = getReaderId();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(["ayahs"], "readonly");
       const store = transaction.objectStore("ayahs");
       const request = store.getAll();
 
       request.onsuccess = () => {
-        const ayahs = request.result;
+        const ayahs = request.result.filter(a => a.readerId === readerId);
         const surahs = [...new Set(ayahs.map((a) => a.surah))];
         resolve(surahs);
       };
@@ -393,7 +409,7 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
       for (let ayah = 1; ayah <= numAyat; ayah++) {
         try {
           const ayahId = `${String(surahNum).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
-          const audioUrl = `${BASE_URL}${ayahId}.mp3`;
+          const audioUrl = `${getBaseUrl()}${ayahId}.mp3`;
 
           const response = await fetchWithRetry(audioUrl);
           if (response.ok) {
@@ -456,7 +472,7 @@ async function downloadAudioSegment() {
         }
 
         const ayahId = `${String(surahNumber).padStart(3, "0")}${String(ayah).padStart(3, "0")}`;
-        const audioUrl = `${BASE_URL}${ayahId}.mp3`;
+        const audioUrl = `${getBaseUrl()}${ayahId}.mp3`;
 
         const response = await fetchWithRetry(audioUrl);
         if (!response.ok) throw new Error(`فشل تحميل الآية ${ayah}`);
@@ -548,6 +564,7 @@ function bufferToWave(audioBuffer) {
 }
 
 elements.surahSelect.addEventListener("change", loadAyasForSurah);
+elements.readerName.addEventListener("change", updateStoredSurahsList);
 elements.startAyaSelect.addEventListener("change", updateEndAyaOptions);
 elements.downloadBtn.addEventListener("click", downloadAudioSegment);
 
