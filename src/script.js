@@ -90,6 +90,7 @@ updateOnlineStatus();
 
 // IndexedDB functions
 let dbInstance = null;
+let currentHowl = null;
 
 async function openDB() {
   if (dbInstance) return dbInstance;
@@ -533,11 +534,32 @@ async function downloadAudioSegment(triggerDownload = true) {
     const wavBlob = bufferToWave(mergedBuffer);
 
     const previewUrl = URL.createObjectURL(wavBlob);
+    
+    // Stop current playback if any
+    if (currentHowl) {
+      currentHowl.stop();
+      currentHowl.unload();
+    }
+
+    // Use Howler for playback
+    currentHowl = new Howl({
+      src: [previewUrl],
+      format: ['wav'],
+      html5: true, // Use HTML5 Audio for large files
+      onplay: () => {
+        elements.previewAudio.classList.remove("d-none");
+        // Sync the native audio element for UI consistency if needed, 
+        // but Howler is handling the actual sound.
+        // We'll just use the native element as a visual placeholder/scrubber if possible,
+        // but Howler is better for speed control.
+      }
+    });
+
     elements.previewAudio.src = previewUrl;
     elements.previewAudio.classList.remove("d-none");
     
-    // Apply current speed
-    elements.previewAudio.playbackRate = currentSpeed;
+    // Apply current speed to the native element for UI consistency
+    elements.previewAudio.playbackRate = 1; // Speed is already baked into the wavBlob!
 
     if (triggerDownload) {
       const a = document.createElement("a");
@@ -549,7 +571,11 @@ async function downloadAudioSegment(triggerDownload = true) {
       showStatus("اكتمل التحميل! المعاينة متاحة أدناه.", "success");
     } else {
       showStatus("تم التجهيز! يمكنك الاستماع الآن.", "success");
-      elements.previewAudio.play();
+      if (currentHowl) {
+        currentHowl.play();
+      } else {
+        elements.previewAudio.play();
+      }
     }
 
     showInfo(`تم دمج ${ayahCount} آية بنجاح`);
@@ -637,13 +663,31 @@ if (elements.speedBtns) {
   elements.speedBtns.forEach(btn => {
     btn.addEventListener("click", () => {
       const speed = parseFloat(btn.dataset.speed);
+      
+      // If we have a Howl playing, we might need to update its rate
+      // But wait, our wavBlob ALREADY has the speed baked in!
+      // So if the user changes the speed AFTER downloading, 
+      // we should probably re-download/re-merge to bake the new speed in,
+      // OR we just update the playback rate of the current audio.
+      
       if (elements.previewAudio) {
-        elements.previewAudio.playbackRate = speed;
+        // If speed is baked in, playbackRate should be 1.
+        // If we want to change speed on the fly, we'd need to NOT bake it in.
+        // But the user specifically wanted it baked in for the download.
+        
+        // For now, let's just update the UI and the native element's rate
+        // to show the user the speed is changing.
+        elements.previewAudio.playbackRate = 1; // Keep it at 1 because it's baked in!
       }
       
       // Update active state
       elements.speedBtns.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+      
+      // Inform the user that they need to re-download to apply new speed to the file
+      if (!elements.previewAudio.classList.contains("d-none")) {
+        showInfo("لتطبيق السرعة الجديدة على الملف المحمل، يرجى الضغط على 'تحميل المقطع' مرة أخرى.");
+      }
     });
   });
 }
