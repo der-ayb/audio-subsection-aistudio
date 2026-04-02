@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="utf-8" name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0d6efd">
+  <link rel="manifest" href="manifest.json" />
+  <title>مقتطف القرآن الصوتي</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link type="text/css" rel="stylesheet" href="src/style.css" />
+</head>
+
+<body>
+  <div class="online-indicator online" id="onlineIndicator">
+    <i class="bi bi-wifi"></i> متصل بالإنترنت
+  </div>
+
+  <div class="main-container">
+    <!-- Install Card -->
+    <div class="card mb-3" hidden id="installCard">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="mb-1"><i class="bi bi-download"></i> تثبيت التطبيق</h6>
+            <small class="text-muted">احصل على وصول سريع من الشاشة الرئيسية</small>
+          </div>
+          <button class="btn btn-install btn-sm" id="installBtn">
+            <i class="bi bi-plus-circle"></i> تثبيت
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+      <div class="card-header text-center">
+        <h2 class="mb-0"><i class="bi bi-music-note-beamed"></i> مقتطف القرآن الصوتي</h2>
+      </div>
+
+      <div class="card-body">
+        <!-- Info Alert -->
+        <div class="alert alert-info mt-3 d-none" id="infoBox" role="alert"></div>
+
+        <!-- Status Alert -->
+        <div class="alert mt-3 d-none" id="statusAlert" role="alert"></div>
+        <!-- Offline Download Section -->
+        <div class="accordion mb-4" id="offlineAccordion">
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#offlineCollapse">
+                <i class="bi bi-cloud-download mx-2"></i>
+                تحميل السور للاستخدام بدون إنترنت
+                <span class="badge bg-primary badge-count mx-2" id="storedCount">0</span>
+              </button>
+            </h2>
+            <div id="offlineCollapse" class="accordion-collapse collapse" data-bs-parent="#offlineAccordion">
+              <div class="accordion-body">
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between mb-2">
+                    <button class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                      <i class="bi bi-check-all"></i> تحديد الكل
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
+                      <i class="bi bi-x-circle"></i> إلغاء التحديد
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" id="clearAllBtn">
+                      <i class="bi bi-trash"></i> حذف الكل
+                    </button>
+                  </div>
+                </div>
+
+                <div id="surahCheckboxes" class="mb-3" style="max-height: 300px; overflow-y: auto;"></div>
+
+                <button class="btn btn-info w-100" id="downloadOfflineBtn">
+                  <i class="bi bi-download"></i> تحميل السور المحددة
+                </button>
+
+                <div class="progress mt-3 d-none" id="downloadProgress">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                    id="progressBar" style="width: 0%">0%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selection Form -->
+        <div class="mb-3">
+          <label for="surahSelect" class="form-label fw-bold">
+            <i class="bi bi-book"></i> السورة:
+          </label>
+          <select id="surahSelect" class="form-select form-select-lg">
+            <option value="">جاري التحميل...</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="startAyaSelect" class="form-label fw-bold">
+            <i class="bi bi-play-circle"></i> الآية الأولى:
+          </label>
+          <select id="startAyaSelect" class="form-select text-truncat aya-select">
+            <option value="">اختر السورة أولاً...</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="endAyaSelect" class="form-label fw-bold">
+            <i class="bi bi-stop-circle"></i> الآية الأخيرة:
+          </label>
+          <select id="endAyaSelect" class="form-select text-truncat aya-select">
+            <option value="">اختر الآية الأولى أولاً...</option>
+          </select>
+        </div>
+
+        <button id="downloadBtn" class="btn btn-primary btn-lg w-100" disabled>
+          <i class="bi bi-download"></i> تحميل المقطع
+        </button>
+
+        <!-- Audio Preview -->
+        <audio id="preview" controls class="mt-3 d-none"></audio>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+  <script src="install.js"></script>
+  <script src="src/script.js"></script>
+</body>
+
+</html>

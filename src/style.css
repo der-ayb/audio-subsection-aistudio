@@ -1,0 +1,101 @@
+body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.main-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.card {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px 15px 0 0 !important;
+  padding: 20px;
+}
+
+.btn-install {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  border: none;
+  color: white;
+}
+
+.btn-install:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+}
+
+.online-indicator {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.online {
+  background: #d4edda;
+  color: #155724;
+}
+
+.offline {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.form-select,
+.btn {
+  border-radius: 10px;
+}
+
+.aya-select {
+  font-family: 'Traditional Arabic', 'Arial', sans-serif;
+  max-height: 200px;
+}
+
+.surah-checkbox {
+  transition: background 0.2s;
+  padding: 8px;
+  border-radius: 5px;
+}
+
+.surah-checkbox:hover {
+  background: #f8f9fa;
+}
+
+.surah-checkbox.downloaded {
+  background: #d4edda;
+}
+
+audio {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.accordion-button:not(.collapsed) {
+  background: #e7f3ff;
+  color: #0c5460;
+}
+
+.progress {
+  border-radius: 10px;
+  height: 25px;
+}
+
+.badge-count {
+  font-size: 0.8rem;
+  vertical-align: middle;
+}

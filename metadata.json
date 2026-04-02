@@ -1,0 +1,5 @@
+{
+  "name": "Quran Audio Snippet",
+  "description": "A web application to select, preview, and download Quran audio snippets with offline support.",
+  "requestFramePermissions": []
+}
