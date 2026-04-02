@@ -228,13 +228,53 @@ async function updateStoredSurahsList() {
     const container = cb.closest(".surah-checkbox");
     if (stored.includes(surahNum)) {
       cb.checked = true;
-      if (container) container.classList.add("downloaded");
+      if (container) {
+        container.classList.add("downloaded");
+        // Add play button if not already there
+        if (!container.querySelector(".play-surah-btn")) {
+          const playBtn = document.createElement("button");
+          playBtn.className = "btn btn-sm btn-link play-surah-btn p-0 ms-2";
+          playBtn.innerHTML = '<i class="bi bi-play-fill text-success fs-4"></i>';
+          playBtn.title = "تشغيل السورة كاملة";
+          playBtn.onclick = (e) => {
+            e.preventDefault();
+            playStoredSurah(surahNum);
+          };
+          container.appendChild(playBtn);
+        }
+      }
     } else {
       cb.checked = false;
-      if (container) container.classList.remove("downloaded");
+      if (container) {
+        container.classList.remove("downloaded");
+        const playBtn = container.querySelector(".play-surah-btn");
+        if (playBtn) playBtn.remove();
+      }
     }
   });
 }
+
+async function playStoredSurah(surahNum) {
+  try {
+    elements.surahSelect.value = surahNum;
+    loadAyasForSurah();
+    
+    // Select all ayahs in this surah
+    const result = db.exec(`SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`);
+    if (result.length > 0) {
+      const numAyat = result[0].values[0][0];
+      elements.startAyaSelect.value = "1";
+      updateEndAyaOptions();
+      elements.endAyaSelect.value = numAyat;
+      
+      // Trigger download/merge and play (without downloading file)
+      await downloadAudioSegment(false);
+    }
+  } catch (error) {
+    showStatus(`خطأ في تشغيل السورة: ${error.message}`, "danger");
+  }
+}
+
 
 function showStatus(message, type = "info") {
   const alertClass = `alert-${type}`;
@@ -442,7 +482,7 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
   }, 1500);
 });
 
-async function downloadAudioSegment() {
+async function downloadAudioSegment(triggerDownload = true) {
   const surahNumber = parseInt(elements.surahSelect.value);
   const startAya = parseInt(elements.startAyaSelect.value);
   const endAya = parseInt(elements.endAyaSelect.value);
@@ -495,24 +535,23 @@ async function downloadAudioSegment() {
     elements.previewAudio.src = previewUrl;
     elements.previewAudio.classList.remove("d-none");
     
-    // Show speed control
-    if (elements.speedControl) {
-      elements.speedControl.classList.remove("d-none");
-      // Reset speed to 1x on new download
-      elements.previewAudio.playbackRate = 1;
-      elements.speedBtns.forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.speed === "1");
-      });
+    // Apply current speed
+    const currentSpeed = parseFloat(document.querySelector(".speed-btn.active")?.dataset.speed || "1");
+    elements.previewAudio.playbackRate = currentSpeed;
+
+    if (triggerDownload) {
+      const a = document.createElement("a");
+      a.href = previewUrl;
+      a.download = `quran_surah${surahNumber}_ayah${startAya}-${endAya}.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showStatus("اكتمل التحميل! المعاينة متاحة أدناه.", "success");
+    } else {
+      showStatus("تم التجهيز! يمكنك الاستماع الآن.", "success");
+      elements.previewAudio.play();
     }
 
-    const a = document.createElement("a");
-    a.href = previewUrl;
-    a.download = `quran_surah${surahNumber}_ayah${startAya}-${endAya}.wav`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    showStatus("اكتمل التحميل! المعاينة متاحة أدناه.", "success");
     showInfo(`تم دمج ${ayahCount} آية بنجاح`);
   } catch (error) {
     showStatus(`خطأ: ${error.message}`, "danger");
