@@ -296,6 +296,70 @@ function showInfo(message) {
   }
 }
 
+// URL Parameter Handling
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    ss: params.get("ss"), // Start Surah
+    sa: params.get("sa"), // Start Ayah
+    es: params.get("es"), // End Surah
+    ea: params.get("ea"), // End Ayah
+    r: params.get("r"),   // Reader index
+    sp: params.get("sp")  // Speed
+  };
+}
+
+function updateUrlParams() {
+  const params = new URLSearchParams();
+  if (elements.startSurahSelect.value) params.set("ss", elements.startSurahSelect.value);
+  if (elements.startAyaSelect.value) params.set("sa", elements.startAyaSelect.value);
+  if (elements.endSurahSelect.value) params.set("es", elements.endSurahSelect.value);
+  if (elements.endAyaSelect.value) params.set("ea", elements.endAyaSelect.value);
+  if (elements.readerName.selectedIndex !== -1) params.set("r", elements.readerName.selectedIndex);
+  
+  const activeSpeedBtn = document.querySelector(".speed-btn.active");
+  if (activeSpeedBtn) params.set("sp", activeSpeedBtn.dataset.speed);
+
+  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  window.history.replaceState({}, "", newUrl);
+}
+
+async function applyUrlParams() {
+  const params = getUrlParams();
+  
+  if (params.r !== null) {
+    elements.readerName.selectedIndex = parseInt(params.r);
+    updateStoredSurahsList();
+  }
+  
+  if (params.sp !== null) {
+    const speedBtn = Array.from(elements.speedBtns).find(btn => btn.dataset.speed === params.sp);
+    if (speedBtn) {
+      elements.speedBtns.forEach(b => b.classList.remove("active"));
+      speedBtn.classList.add("active");
+    }
+  }
+
+  if (params.ss !== null) {
+    elements.startSurahSelect.value = params.ss;
+    await loadAyasForStartSurah();
+    
+    if (params.sa !== null) {
+      elements.startAyaSelect.value = params.sa;
+      await loadAyasForEndSurah(); // This also updates end surah options
+    }
+  }
+
+  if (params.es !== null) {
+    elements.endSurahSelect.value = params.es;
+    await loadAyasForEndSurah();
+    
+    if (params.ea !== null) {
+      elements.endAyaSelect.value = params.ea;
+    }
+  }
+}
+
 async function initDatabase() {
   try {
     showStatus("جاري تحميل قاعدة البيانات...", "info");
@@ -309,6 +373,7 @@ async function initDatabase() {
     db = new SQL.Database(new Uint8Array(buffer));
 
     loadSurahs();
+    await applyUrlParams();
     await updateStoredSurahsList();
 
     showStatus("تم تحميل قاعدة البيانات بنجاح!", "success");
@@ -386,7 +451,7 @@ function updateEndSurahOptions() {
   // Disable surahs before startSurah in endSurahSelect
   Array.from(elements.endSurahSelect.options).forEach(option => {
     const surahId = parseInt(option.value);
-    option.disabled = surahId < startSurah;
+    option.hidden = surahId < startSurah;
   });
   
   if (currentEndSurah < startSurah) {
@@ -416,7 +481,7 @@ async function loadAyasForEndSurah() {
       
       // If same surah, disable ayas before startAya
       if (startSurah === endSurah && ayah < startAya) {
-        option.disabled = true;
+        option.hidden = true;
       }
       
       elements.endAyaSelect.appendChild(option);
@@ -470,7 +535,7 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
     showStatus("الرجاء اختيار سورة واحدة على الأقل", "danger");
     return;
   }
-
+ 
   elements.downloadOfflineBtn.disabled = true;
   elements.downloadProgress.classList.remove("d-none");
 
@@ -694,10 +759,23 @@ function bufferToWave(audioBuffer) {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
-elements.startSurahSelect.addEventListener("change", loadAyasForStartSurah);
-elements.endSurahSelect.addEventListener("change", loadAyasForEndSurah);
-elements.readerName.addEventListener("change", updateStoredSurahsList);
-elements.startAyaSelect.addEventListener("change", loadAyasForEndSurah);
+elements.startSurahSelect.addEventListener("change", () => {
+  loadAyasForStartSurah();
+  updateUrlParams();
+});
+elements.endSurahSelect.addEventListener("change", () => {
+  loadAyasForEndSurah();
+  updateUrlParams();
+});
+elements.readerName.addEventListener("change", () => {
+  updateStoredSurahsList();
+  updateUrlParams();
+});
+elements.startAyaSelect.addEventListener("change", () => {
+  loadAyasForEndSurah();
+  updateUrlParams();
+});
+elements.endAyaSelect.addEventListener("change", updateUrlParams);
 elements.downloadBtn.addEventListener("click", downloadAudioSegment);
 
 // Speed control listeners
@@ -725,6 +803,8 @@ if (elements.speedBtns) {
       // Update active state
       elements.speedBtns.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+      
+      updateUrlParams();
       
       // Inform the user that they need to re-download to apply new speed to the file
       if (!elements.previewAudio.classList.contains("d-none")) {
