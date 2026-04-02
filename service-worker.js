@@ -10,13 +10,6 @@ workbox.core.clientsClaim();
 // Precache critical files with revisions
 workbox.precaching.precacheAndRoute(
   [
-    { url: "./", revision: "1" },
-    { url: "./index.html", revision: "1" },
-    { url: "./app.html", revision: "1" },
-    { url: "./manifest.json", revision: "1" },
-    { url: "./src/style.css", revision: "1" },
-    { url: "./src/script.js", revision: "1" },
-    { url: "./install.js", revision: "1" },
     { url: "./assets/quran.sqlite", revision: "1" },
     {
       url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
@@ -43,7 +36,6 @@ workbox.precaching.precacheAndRoute(
 // Cache-first for precached local and CDN files
 workbox.routing.registerRoute(
   ({ url }) =>
-    url.origin === location.origin ||
     url.origin === "https://fonts.googleapis.com" ||
     url.origin === "https://cdnjs.cloudflare.com" ||
     url.origin === "https://cdn.jsdelivr.net",
@@ -58,43 +50,12 @@ workbox.routing.registerRoute(
   })
 );
 
-// Cache images
-workbox.routing.registerRoute(
-  ({ request }) => request.destination === "image",
-  new workbox.strategies.StaleWhileRevalidate({
-    cacheName: "image-cache",
-  })
-);
-
-// Serve HTML pages with Network First and offline fallback
-workbox.routing.registerRoute(
-  ({ request }) => request.mode === "navigate",
-  async ({ event }) => {
-    try {
-      const response = await workbox.strategies
-        .networkFirst({
-          cacheName: "pages-cache",
-          plugins: [
-            new workbox.expiration.ExpirationPlugin({
-              maxEntries: 50,
-            }),
-          ],
-        })
-        .handle({ event });
-      return response || (await caches.match("./app.html"));
-    } catch (error) {
-      return await caches.match("./app.html");
-    }
-  }
-);
 
 // Clean up old/unused caches during activation
 self.addEventListener("activate", (event) => {
   const currentCaches = [
     workbox.core.cacheNames.precache,
     "core-cache",
-    "image-cache",
-    "pages-cache",
   ];
 
   event.waitUntil(
