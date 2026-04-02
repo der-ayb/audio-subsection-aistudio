@@ -66,6 +66,8 @@ const elements = {
   surahCheckboxes: document.getElementById("surahCheckboxes"),
   onlineIndicator: document.getElementById("onlineIndicator"),
   readerName: document.getElementById("readerName"),
+  speedControl: document.getElementById("speedControl"),
+  speedBtns: document.querySelectorAll(".speed-btn"),
   selectAllBtn: document.getElementById("selectAllBtn"),
   deselectAllBtn: document.getElementById("deselectAllBtn"),
   clearAllBtn: document.getElementById("clearAllBtn"),
@@ -492,6 +494,16 @@ async function downloadAudioSegment() {
     const previewUrl = URL.createObjectURL(wavBlob);
     elements.previewAudio.src = previewUrl;
     elements.previewAudio.classList.remove("d-none");
+    
+    // Show speed control
+    if (elements.speedControl) {
+      elements.speedControl.classList.remove("d-none");
+      // Reset speed to 1x on new download
+      elements.previewAudio.playbackRate = 1;
+      elements.speedBtns.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.speed === "1");
+      });
+    }
 
     const a = document.createElement("a");
     a.href = previewUrl;
@@ -568,6 +580,22 @@ elements.surahSelect.addEventListener("change", loadAyasForSurah);
 elements.readerName.addEventListener("change", updateStoredSurahsList);
 elements.startAyaSelect.addEventListener("change", updateEndAyaOptions);
 elements.downloadBtn.addEventListener("click", downloadAudioSegment);
+
+// Speed control listeners
+if (elements.speedBtns) {
+  elements.speedBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const speed = parseFloat(btn.dataset.speed);
+      if (elements.previewAudio) {
+        elements.previewAudio.playbackRate = speed;
+      }
+      
+      // Update active state
+      elements.speedBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+}
 
 initDatabase();
 
