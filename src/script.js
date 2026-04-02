@@ -90,7 +90,6 @@ updateOnlineStatus();
 
 // IndexedDB functions
 let dbInstance = null;
-let currentHowl = null;
 
 async function openDB() {
   if (dbInstance) return dbInstance;
@@ -535,26 +534,6 @@ async function downloadAudioSegment(triggerDownload = true) {
 
     const previewUrl = URL.createObjectURL(wavBlob);
     
-    // Stop current playback if any
-    if (currentHowl) {
-      currentHowl.stop();
-      currentHowl.unload();
-    }
-
-    // Use Howler for playback
-    currentHowl = new Howl({
-      src: [previewUrl],
-      format: ['wav'],
-      html5: true, // Use HTML5 Audio for large files
-      onplay: () => {
-        elements.previewAudio.classList.remove("d-none");
-        // Sync the native audio element for UI consistency if needed, 
-        // but Howler is handling the actual sound.
-        // We'll just use the native element as a visual placeholder/scrubber if possible,
-        // but Howler is better for speed control.
-      }
-    });
-
     elements.previewAudio.src = previewUrl;
     elements.previewAudio.classList.remove("d-none");
     
@@ -571,11 +550,7 @@ async function downloadAudioSegment(triggerDownload = true) {
       showStatus("اكتمل التحميل! المعاينة متاحة أدناه.", "success");
     } else {
       showStatus("تم التجهيز! يمكنك الاستماع الآن.", "success");
-      if (currentHowl) {
-        currentHowl.play();
-      } else {
-        elements.previewAudio.play();
-      }
+      elements.previewAudio.play();
     }
 
     showInfo(`تم دمج ${ayahCount} آية بنجاح`);
