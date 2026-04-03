@@ -21,7 +21,7 @@ if (workbox) {
       { url: "./install.js", revision: "1" },
       { url: "./assets/quran.sqlite", revision: "1" },
       {
-        url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
+        url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css",
         revision: "1",
       },
       {
