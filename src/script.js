@@ -675,10 +675,7 @@ async function downloadAudioSegment(triggerDownload = true) {
     if (triggerDownload) {
       const a = document.createElement("a");
       a.href = previewUrl;
-      const filename = (startSurah === endSurah) 
-        ? `quran_surah${startSurah}_ayah${startAya}-${endAya}.wav`
-        : `quran_surah${startSurah}aya${startAya}_to_surah${endSurah}aya${endAya}.wav`;
-      a.download = filename;
+      a.download = `quran.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
