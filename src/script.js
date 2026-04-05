@@ -705,6 +705,25 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   buffers.forEach(b => totalDuration += b.duration);
   const renderedDuration = totalDuration / speed;
 
+  // Optimization: If speed is 1, avoid Tone.js and use standard OfflineAudioContext
+  if (speed === 1) {
+    const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+      numberOfChannels,
+      Math.ceil(renderedDuration * sampleRate),
+      sampleRate
+    );
+
+    let startTime = 0;
+    for (const buffer of buffers) {
+      const source = offlineCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(offlineCtx.destination);
+      source.start(startTime);
+      startTime += buffer.duration;
+    }
+    return await offlineCtx.startRendering();
+  }
+
   // Use Tone.Offline for high-quality rendering
   return await Tone.Offline(async () => {
     let startTime = 0;
