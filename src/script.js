@@ -72,13 +72,7 @@ const elements = {
   downloadBtn: document.getElementById("downloadBtn"),
   statusAlert: document.getElementById("statusAlert"),
   infoBox: document.getElementById("infoBox"),
-  playerContainer: document.getElementById("player-container"),
-  waveform: document.getElementById("waveform"),
-  playPauseBtn: document.getElementById("playPauseBtn"),
-  stopBtn: document.getElementById("stopBtn"),
-  currentTime: document.getElementById("currentTime"),
-  totalDuration: document.getElementById("totalDuration"),
-  downloadLink: document.getElementById("downloadLink"),
+  previewAudio: document.getElementById("preview"),
   downloadOfflineBtn: document.getElementById("downloadOfflineBtn"),
   downloadProgress: document.getElementById("downloadProgress"),
   progressBar: document.getElementById("progressBar"),
@@ -653,51 +647,6 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
   }, 1500);
 });
 
-// Wavesurfer Instance
-let wavesurfer = null;
-
-function initWaveSurfer() {
-  if (wavesurfer) wavesurfer.destroy();
-
-  wavesurfer = WaveSurfer.create({
-    container: elements.waveform,
-    waveColor: "#4F46E5",
-    progressColor: "#818CF8",
-    cursorColor: "#4F46E5",
-    barWidth: 2,
-    height: 80,
-    responsive: true,
-    normalize: true,
-    backend: "WebAudio",
-  });
-
-  wavesurfer.on("play", () => {
-    elements.playPauseBtn.innerHTML = '<i class="bi bi-pause-fill"></i>';
-  });
-
-  wavesurfer.on("pause", () => {
-    elements.playPauseBtn.innerHTML = '<i class="bi bi-play-fill"></i>';
-  });
-
-  wavesurfer.on("finish", () => {
-    elements.playPauseBtn.innerHTML = '<i class="bi bi-play-fill"></i>';
-  });
-
-  wavesurfer.on("timeupdate", (currentTime) => {
-    elements.currentTime.textContent = formatTime(currentTime);
-  });
-
-  wavesurfer.on("ready", () => {
-    elements.totalDuration.textContent = formatTime(wavesurfer.getDuration());
-  });
-}
-
-function formatTime(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
-}
-
 async function downloadAudioSegment(triggerDownload = true) {
   const startSurah = parseInt(elements.startSurahSelect.value);
   const endSurah = parseInt(elements.endSurahSelect.value);
@@ -711,7 +660,7 @@ async function downloadAudioSegment(triggerDownload = true) {
 
   try {
     elements.downloadBtn.disabled = true;
-    elements.playerContainer.classList.add("d-none");
+    elements.previewAudio.classList.add("d-none");
     elements.infoBox.classList.add("d-none");
 
     const audioBuffers = [];
@@ -783,25 +732,23 @@ async function downloadAudioSegment(triggerDownload = true) {
 
     const previewUrl = URL.createObjectURL(wavBlob);
 
-    // Initialize Wavesurfer and load blob
-    if (!wavesurfer) initWaveSurfer();
-    wavesurfer.loadBlob(wavBlob);
+    elements.previewAudio.src = previewUrl;
+    elements.previewAudio.classList.remove("d-none");
 
-    elements.playerContainer.classList.remove("d-none");
-    elements.downloadLink.href = previewUrl;
-    elements.downloadLink.download = `quran_${startSurah}_${startAya}_to_${endSurah}_${endAya}.wav`;
+    // Apply current speed to the native element for UI consistency
+    elements.previewAudio.playbackRate = 1; // Speed is already baked into the wavBlob!
 
     if (triggerDownload) {
       const a = document.createElement("a");
       a.href = previewUrl;
-      a.download = elements.downloadLink.download;
+      a.download = `quran.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       showStatus("اكتمل التحميل! المعاينة متاحة أدناه.", "success");
     } else {
       showStatus("تم التجهيز! يمكنك الاستماع الآن.", "success");
-      wavesurfer.play();
+      elements.previewAudio.play();
     }
 
     showInfo(`تم دمج ${ayahCount} آية بنجاح`);
@@ -847,65 +794,31 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
     return mergedBuffer;
   }
 
-  // Use SoundTouchJS for high-quality time stretching
-  if (!window.soundtouch) {
-    throw new Error("جاري تحميل مكتبة معالجة الصوت، يرجى المحاولة مرة أخرى خلال ثوانٍ.");
-  }
+  // Use Tone.Offline for high-quality rendering
+  const renderedDuration = totalLengthSamples / sampleRate / speed;
+  return await Tone.Offline(
+    async () => {
+      let startTime = 0;
 
-  const st = new window.soundtouch.SoundTouch();
-  st.tempo = speed;
+      for (const buffer of buffers) {
+        // GrainPlayer allows changing speed without changing pitch
+        const player = new Tone.GrainPlayer(buffer).toDestination();
 
-  // Merge all buffers into one for SoundTouch processing
-  const sourceBuffer = audioContext.createBuffer(
+        // Apply speed (playbackRate)
+        player.playbackRate = speed;
+
+        // Ensure the grain size and overlap are suitable for speech
+        player.grainSize = 0.1;
+        player.overlap = 0.05;
+
+        player.start(startTime);
+        startTime += buffer.duration / speed;
+      }
+    },
+    renderedDuration,
     numberOfChannels,
-    totalLengthSamples,
     sampleRate,
   );
-  let offset = 0;
-  buffers.forEach((buffer) => {
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      sourceBuffer.getChannelData(channel).set(buffer.getChannelData(channel), offset);
-    }
-    offset += buffer.length;
-  });
-
-  let currentOffset = 0;
-  const source = {
-    extract: function (target, numFrames) {
-      const framesToExtract = Math.min(numFrames, totalLengthSamples - currentOffset);
-      for (let i = 0; i < framesToExtract; i++) {
-        for (let channel = 0; channel < numberOfChannels; channel++) {
-          target[i * numberOfChannels + channel] = sourceBuffer.getChannelData(channel)[currentOffset + i];
-        }
-      }
-      currentOffset += framesToExtract;
-      return framesToExtract;
-    },
-  };
-
-  const filter = new window.soundtouch.SimpleFilter(source, st);
-  const resultLength = Math.ceil(totalLengthSamples / speed);
-  const resultBuffer = audioContext.createBuffer(numberOfChannels, resultLength, sampleRate);
-  
-  const samples = new Float32Array(resultLength * numberOfChannels);
-  let framesExtracted = 0;
-  
-  while (framesExtracted < resultLength) {
-    const framesToExtract = Math.min(1024, resultLength - framesExtracted);
-    const extracted = filter.extract(samples.subarray(framesExtracted * numberOfChannels), framesToExtract);
-    if (extracted === 0) break;
-    framesExtracted += extracted;
-  }
-
-  // Copy interleaved samples back to resultBuffer channels
-  for (let channel = 0; channel < numberOfChannels; channel++) {
-    const channelData = resultBuffer.getChannelData(channel);
-    for (let i = 0; i < resultLength; i++) {
-      channelData[i] = samples[i * numberOfChannels + channel];
-    }
-  }
-
-  return resultBuffer;
 }
 
 function bufferToWave(audioBuffer) {
@@ -975,33 +888,26 @@ elements.startAyaSelect.addEventListener("change", () => {
 elements.endAyaSelect.addEventListener("change", updateUrlParams);
 elements.downloadBtn.addEventListener("click", downloadAudioSegment);
 
-// Wavesurfer controls
-if (elements.playPauseBtn) {
-  elements.playPauseBtn.addEventListener("click", () => {
-    if (wavesurfer) wavesurfer.playPause();
-  });
-}
-
-if (elements.stopBtn) {
-  elements.stopBtn.addEventListener("click", () => {
-    if (wavesurfer) {
-      wavesurfer.stop();
-      elements.playPauseBtn.innerHTML = '<i class="bi bi-play-fill"></i>';
-    }
-  });
-}
-
 // Speed control listeners
 if (elements.speedBtns) {
   elements.speedBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       const speed = parseFloat(btn.dataset.speed);
 
-      // Inform the user that they need to re-download to apply new speed to the file
-      if (elements.playerContainer && !elements.playerContainer.classList.contains("d-none")) {
-        showInfo(
-          "لتطبيق السرعة الجديدة على الملف المحمل، يرجى الضغط على 'تحميل المقطع' مرة أخرى.",
-        );
+      // If we have a Howl playing, we might need to update its rate
+      // But wait, our wavBlob ALREADY has the speed baked in!
+      // So if the user changes the speed AFTER downloading,
+      // we should probably re-download/re-merge to bake the new speed in,
+      // OR we just update the playback rate of the current audio.
+
+      if (elements.previewAudio) {
+        // If speed is baked in, playbackRate should be 1.
+        // If we want to change speed on the fly, we'd need to NOT bake it in.
+        // But the user specifically wanted it baked in for the download.
+
+        // For now, let's just update the UI and the native element's rate
+        // to show the user the speed is changing.
+        elements.previewAudio.playbackRate = 1; // Keep it at 1 because it's baked in!
       }
 
       // Update active state
@@ -1009,6 +915,13 @@ if (elements.speedBtns) {
       btn.classList.add("active");
 
       updateUrlParams();
+
+      // Inform the user that they need to re-download to apply new speed to the file
+      if (!elements.previewAudio.classList.contains("d-none")) {
+        showInfo(
+          "لتطبيق السرعة الجديدة على الملف المحمل، يرجى الضغط على 'تحميل المقطع' مرة أخرى.",
+        );
+      }
     });
   });
 }
