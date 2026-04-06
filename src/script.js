@@ -6,7 +6,9 @@ const RETRY_DELAY = 1000; // 1 second base delay
 
 // Helper to get current reader's base URL
 function getBaseUrl() {
-  return elements.readerName ? elements.readerName.value : "https://raw.githubusercontent.com/brmhmh/yacineee/refs/heads/upup/";
+  return elements.readerName
+    ? elements.readerName.value
+    : "https://raw.githubusercontent.com/brmhmh/yacineee/refs/heads/upup/";
 }
 
 // Helper to get reader ID from URL
@@ -27,14 +29,18 @@ async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
   try {
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal
+      signal: controller.signal,
     });
     clearTimeout(id);
 
     if (!response.ok) {
       if (response.status >= 500 && retries > 0) {
-        console.warn(`Server error ${response.status}, retrying... (${retries} left)`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1)));
+        console.warn(
+          `Server error ${response.status}, retrying... (${retries} left)`,
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1)),
+        );
         return fetchWithRetry(url, options, retries - 1);
       }
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -42,9 +48,16 @@ async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
     return response;
   } catch (error) {
     clearTimeout(id);
-    if (retries > 0 && (error.name === 'AbortError' || error.name === 'TypeError')) {
-      console.warn(`Network error or timeout: ${error.message}, retrying... (${retries} left)`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1)));
+    if (
+      retries > 0 &&
+      (error.name === "AbortError" || error.name === "TypeError")
+    ) {
+      console.warn(
+        `Network error or timeout: ${error.message}, retrying... (${retries} left)`,
+      );
+      await new Promise((resolve) =>
+        setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1)),
+      );
       return fetchWithRetry(url, options, retries - 1);
     }
     throw error;
@@ -101,7 +114,11 @@ async function openDB() {
 
       request.onerror = (event) => {
         console.error("IndexedDB open error:", event.target.error);
-        reject(new Error("فشل فتح قاعدة البيانات المحلية: " + event.target.error.message));
+        reject(
+          new Error(
+            "فشل فتح قاعدة البيانات المحلية: " + event.target.error.message,
+          ),
+        );
       };
 
       request.onsuccess = (event) => {
@@ -188,7 +205,7 @@ async function getStoredSurahs() {
       const request = store.getAll();
 
       request.onsuccess = () => {
-        const ayahs = request.result.filter(a => a.readerId === readerId);
+        const ayahs = request.result.filter((a) => a.readerId === readerId);
         const surahs = [...new Set(ayahs.map((a) => a.surah))];
         resolve(surahs);
       };
@@ -223,7 +240,9 @@ async function updateStoredSurahsList() {
   const stored = await getStoredSurahs();
   if (elements.storedCount) elements.storedCount.textContent = stored.length;
 
-  const checkboxes = elements.surahCheckboxes.querySelectorAll('input[type="checkbox"]');
+  const checkboxes = elements.surahCheckboxes.querySelectorAll(
+    'input[type="checkbox"]',
+  );
   checkboxes.forEach((cb) => {
     const surahNum = parseInt(cb.value);
     const container = cb.closest(".surah-checkbox");
@@ -235,7 +254,8 @@ async function updateStoredSurahsList() {
         if (!container.querySelector(".play-surah-btn")) {
           const playBtn = document.createElement("button");
           playBtn.className = "btn btn-sm btn-link play-surah-btn p-0 ms-2";
-          playBtn.innerHTML = '<i class="bi bi-play-fill text-success fs-4"></i>';
+          playBtn.innerHTML =
+            '<i class="bi bi-play-fill text-success fs-4"></i>';
           playBtn.title = "تشغيل السورة كاملة";
           playBtn.onclick = (e) => {
             e.preventDefault();
@@ -261,14 +281,16 @@ async function playStoredSurah(surahNum) {
     elements.endSurahSelect.value = surahNum;
     await loadAyasForStartSurah();
     await loadAyasForEndSurah();
-    
+
     // Select all ayahs in this surah
-    const result = db.exec(`SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`);
+    const result = db.exec(
+      `SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`,
+    );
     if (result.length > 0) {
       const numAyat = result[0].values[0][0];
       elements.startAyaSelect.value = "1";
       elements.endAyaSelect.value = numAyat;
-      
+
       // Trigger download/merge and play (without downloading file)
       await downloadAudioSegment(false);
     }
@@ -277,13 +299,16 @@ async function playStoredSurah(surahNum) {
   }
 }
 
-
 function showStatus(message, type = "info") {
   const alertClass = `alert-${type}`;
   if (elements.statusAlert) {
     elements.statusAlert.className = `alert ${alertClass} mt-3`;
     elements.statusAlert.innerHTML = `<i class="bi bi-${
-      type === "success" ? "check-circle" : type === "danger" ? "x-circle" : "info-circle"
+      type === "success"
+        ? "check-circle"
+        : type === "danger"
+          ? "x-circle"
+          : "info-circle"
     }"></i> ${message}`;
     elements.statusAlert.classList.remove("d-none");
   }
@@ -304,19 +329,24 @@ function getUrlParams() {
     sa: params.get("sa"), // Start Ayah
     es: params.get("es"), // End Surah
     ea: params.get("ea"), // End Ayah
-    r: params.get("r"),   // Reader index
-    sp: params.get("sp")  // Speed
+    r: params.get("r"), // Reader index
+    sp: params.get("sp"), // Speed
   };
 }
 
 function updateUrlParams() {
   const params = new URLSearchParams();
-  if (elements.startSurahSelect.value) params.set("ss", elements.startSurahSelect.value);
-  if (elements.startAyaSelect.value) params.set("sa", elements.startAyaSelect.value);
-  if (elements.endSurahSelect.value) params.set("es", elements.endSurahSelect.value);
-  if (elements.endAyaSelect.value) params.set("ea", elements.endAyaSelect.value);
-  if (elements.readerName.selectedIndex !== -1) params.set("r", elements.readerName.selectedIndex);
-  
+  if (elements.startSurahSelect.value)
+    params.set("ss", elements.startSurahSelect.value);
+  if (elements.startAyaSelect.value)
+    params.set("sa", elements.startAyaSelect.value);
+  if (elements.endSurahSelect.value)
+    params.set("es", elements.endSurahSelect.value);
+  if (elements.endAyaSelect.value)
+    params.set("ea", elements.endAyaSelect.value);
+  if (elements.readerName.selectedIndex !== -1)
+    params.set("r", elements.readerName.selectedIndex);
+
   const activeSpeedBtn = document.querySelector(".speed-btn.active");
   if (activeSpeedBtn) params.set("sp", activeSpeedBtn.dataset.speed);
 
@@ -326,7 +356,7 @@ function updateUrlParams() {
 
 async function applyUrlParams() {
   const params = getUrlParams();
-  
+
   // Load reader from URL or localStorage
   if (params.r !== null) {
     elements.readerName.selectedIndex = parseInt(params.r);
@@ -339,11 +369,13 @@ async function applyUrlParams() {
       updateStoredSurahsList();
     }
   }
-  
+
   if (params.sp !== null) {
-    const speedBtn = Array.from(elements.speedBtns).find(btn => btn.dataset.speed === params.sp);
+    const speedBtn = Array.from(elements.speedBtns).find(
+      (btn) => btn.dataset.speed === params.sp,
+    );
     if (speedBtn) {
-      elements.speedBtns.forEach(b => b.classList.remove("active"));
+      elements.speedBtns.forEach((b) => b.classList.remove("active"));
       speedBtn.classList.add("active");
     }
   }
@@ -351,7 +383,7 @@ async function applyUrlParams() {
   if (params.ss !== null) {
     elements.startSurahSelect.value = params.ss;
     await loadAyasForStartSurah();
-    
+
     if (params.sa !== null) {
       elements.startAyaSelect.value = params.sa;
       await loadAyasForEndSurah(); // This also updates end surah options
@@ -361,7 +393,7 @@ async function applyUrlParams() {
   if (params.es !== null) {
     elements.endSurahSelect.value = params.es;
     await loadAyasForEndSurah();
-    
+
     if (params.ea !== null) {
       elements.endAyaSelect.value = params.ea;
     }
@@ -372,7 +404,8 @@ async function initDatabase() {
   try {
     showStatus("جاري تحميل قاعدة البيانات...", "info");
     const SQL = await initSqlJs({
-      locateFile: (file) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`,
+      locateFile: (file) =>
+        `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`,
     });
 
     const response = await fetchWithRetry("./assets/quran.sqlite");
@@ -392,7 +425,9 @@ async function initDatabase() {
 
 function loadSurahs() {
   if (!db) return;
-  const result = db.exec("SELECT id_sura, sura, num_ayat FROM quran_index ORDER BY id_sura");
+  const result = db.exec(
+    "SELECT id_sura, sura, num_ayat FROM quran_index ORDER BY id_sura",
+  );
 
   if (result.length > 0) {
     elements.startSurahSelect.innerHTML = "";
@@ -407,7 +442,7 @@ function loadSurahs() {
       option.value = id_sura;
       option.textContent = `${id_sura}. ${sura}`;
       option.dataset.numAyat = num_ayat;
-      
+
       elements.startSurahSelect.appendChild(option.cloneNode(true));
       elements.endSurahSelect.appendChild(option.cloneNode(true));
 
@@ -433,7 +468,9 @@ async function loadAyasForStartSurah() {
   const surahId = parseInt(elements.startSurahSelect.value);
   if (!surahId || !db) return;
 
-  const result = db.exec(`SELECT ayah, text FROM quran_ayat WHERE sura = ${surahId} ORDER BY ayah`);
+  const result = db.exec(
+    `SELECT ayah, text FROM quran_ayat WHERE sura = ${surahId} ORDER BY ayah`,
+  );
 
   if (result.length > 0) {
     elements.startAyaSelect.innerHTML = "";
@@ -455,13 +492,13 @@ async function loadAyasForStartSurah() {
 function updateEndSurahOptions() {
   const startSurah = parseInt(elements.startSurahSelect.value);
   const currentEndSurah = parseInt(elements.endSurahSelect.value);
-  
+
   // Disable surahs before startSurah in endSurahSelect
-  Array.from(elements.endSurahSelect.options).forEach(option => {
+  Array.from(elements.endSurahSelect.options).forEach((option) => {
     const surahId = parseInt(option.value);
     option.hidden = surahId < startSurah;
   });
-  
+
   if (currentEndSurah < startSurah) {
     elements.endSurahSelect.value = startSurah;
     loadAyasForEndSurah();
@@ -472,10 +509,12 @@ async function loadAyasForEndSurah() {
   const startSurah = parseInt(elements.startSurahSelect.value);
   const endSurah = parseInt(elements.endSurahSelect.value);
   const startAya = parseInt(elements.startAyaSelect.value);
-  
+
   if (!endSurah || !db) return;
 
-  const result = db.exec(`SELECT ayah, text FROM quran_ayat WHERE sura = ${endSurah} ORDER BY ayah`);
+  const result = db.exec(
+    `SELECT ayah, text FROM quran_ayat WHERE sura = ${endSurah} ORDER BY ayah`,
+  );
 
   if (result.length > 0) {
     elements.endAyaSelect.innerHTML = "";
@@ -486,12 +525,12 @@ async function loadAyasForEndSurah() {
       const option = document.createElement("option");
       option.value = ayah;
       option.textContent = `${ayah}. ${text}`;
-      
+
       // If same surah, disable ayas before startAya
       if (startSurah === endSurah && ayah < startAya) {
         option.hidden = true;
       }
-      
+
       elements.endAyaSelect.appendChild(option);
     });
 
@@ -501,21 +540,25 @@ async function loadAyasForEndSurah() {
         elements.endAyaSelect.value = startAya;
       }
     } else {
-      // Default to last aya of end surah if it's a different surah? 
+      // Default to last aya of end surah if it's a different surah?
       // Or just keep current if valid.
     }
-    
+
     elements.downloadBtn.disabled = false;
   }
 }
 
 elements.selectAllBtn.addEventListener("click", () => {
-  const checkboxes = elements.surahCheckboxes.querySelectorAll('input[type="checkbox"]');
+  const checkboxes = elements.surahCheckboxes.querySelectorAll(
+    'input[type="checkbox"]',
+  );
   checkboxes.forEach((cb) => (cb.checked = true));
 });
 
 elements.deselectAllBtn.addEventListener("click", () => {
-  const checkboxes = elements.surahCheckboxes.querySelectorAll('input[type="checkbox"]');
+  const checkboxes = elements.surahCheckboxes.querySelectorAll(
+    'input[type="checkbox"]',
+  );
   checkboxes.forEach((cb) => (cb.checked = false));
 });
 
@@ -536,14 +579,16 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
     return;
   }
 
-  const checkboxes = elements.surahCheckboxes.querySelectorAll('input[type="checkbox"]:checked');
+  const checkboxes = elements.surahCheckboxes.querySelectorAll(
+    'input[type="checkbox"]:checked',
+  );
   const selectedSurahs = Array.from(checkboxes).map((cb) => parseInt(cb.value));
 
   if (selectedSurahs.length === 0) {
     showStatus("الرجاء اختيار سورة واحدة على الأقل", "danger");
     return;
   }
- 
+
   elements.downloadOfflineBtn.disabled = true;
   elements.downloadProgress.classList.remove("d-none");
 
@@ -551,14 +596,18 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
   let downloadedAyahs = 0;
 
   for (const surahNum of selectedSurahs) {
-    const result = db.exec(`SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`);
+    const result = db.exec(
+      `SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`,
+    );
     if (result.length > 0) {
       totalAyahs += result[0].values[0][0];
     }
   }
 
   for (const surahNum of selectedSurahs) {
-    const result = db.exec(`SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`);
+    const result = db.exec(
+      `SELECT num_ayat FROM quran_index WHERE id_sura = ${surahNum}`,
+    );
     if (result.length > 0) {
       const numAyat = result[0].values[0][0];
 
@@ -578,7 +627,10 @@ elements.downloadOfflineBtn.addEventListener("click", async () => {
           elements.progressBar.style.width = progress + "%";
           elements.progressBar.textContent = `${progress}% - آية ${ayah}/${numAyat} من السورة ${surahNum}`;
         } catch (error) {
-          console.error(`خطأ في تحميل الآية ${ayah} من السورة ${surahNum}:`, error);
+          console.error(
+            `خطأ في تحميل الآية ${ayah} من السورة ${surahNum}:`,
+            error,
+          );
         }
       }
     }
@@ -612,20 +664,24 @@ async function downloadAudioSegment(triggerDownload = true) {
     elements.infoBox.classList.add("d-none");
 
     const audioBuffers = [];
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = new (
+      window.AudioContext || window.webkitAudioContext
+    )();
 
     // Collect all ayahs across surahs
     const ayahsToFetch = [];
     for (let s = startSurah; s <= endSurah; s++) {
-      const sStart = (s === startSurah) ? startAya : 1;
+      const sStart = s === startSurah ? startAya : 1;
       let sEnd;
       if (s === endSurah) {
         sEnd = endAya;
       } else {
-        const result = db.exec(`SELECT num_ayat FROM quran_index WHERE id_sura = ${s}`);
+        const result = db.exec(
+          `SELECT num_ayat FROM quran_index WHERE id_sura = ${s}`,
+        );
         sEnd = result[0].values[0][0];
       }
-      
+
       for (let a = sStart; a <= sEnd; a++) {
         ayahsToFetch.push({ surah: s, ayah: a });
       }
@@ -641,7 +697,10 @@ async function downloadAudioSegment(triggerDownload = true) {
 
       if (!arrayBuffer) {
         if (!navigator.onLine) {
-          showStatus(`لا يوجد اتصال بالإنترنت والآية ${ayah} من السورة ${surah} غير محفوظة`, "danger");
+          showStatus(
+            `لا يوجد اتصال بالإنترنت والآية ${ayah} من السورة ${surah} غير محفوظة`,
+            "danger",
+          );
           elements.downloadBtn.disabled = false;
           return;
         }
@@ -650,7 +709,8 @@ async function downloadAudioSegment(triggerDownload = true) {
         const audioUrl = `${getBaseUrl()}${ayahId}.mp3`;
 
         const response = await fetchWithRetry(audioUrl);
-        if (!response.ok) throw new Error(`فشل تحميل الآية ${ayah} من السورة ${surah}`);
+        if (!response.ok)
+          throw new Error(`فشل تحميل الآية ${ayah} من السورة ${surah}`);
         arrayBuffer = await response.arrayBuffer();
       }
 
@@ -659,16 +719,22 @@ async function downloadAudioSegment(triggerDownload = true) {
     }
 
     showStatus("جاري دمج الآيات...", "info");
-    const currentSpeed = parseFloat(document.querySelector(".speed-btn.active")?.dataset.speed || "1");
-    const mergedBuffer = await mergeAudioBuffers(audioContext, audioBuffers, currentSpeed);
+    const currentSpeed = parseFloat(
+      document.querySelector(".speed-btn.active")?.dataset.speed || "1",
+    );
+    const mergedBuffer = await mergeAudioBuffers(
+      audioContext,
+      audioBuffers,
+      currentSpeed,
+    );
     showStatus("جاري ترميز الصوت...", "info");
     const wavBlob = bufferToWave(mergedBuffer);
 
     const previewUrl = URL.createObjectURL(wavBlob);
-    
+
     elements.previewAudio.src = previewUrl;
     elements.previewAudio.classList.remove("d-none");
-    
+
     // Apply current speed to the native element for UI consistency
     elements.previewAudio.playbackRate = 1; // Speed is already baked into the wavBlob!
 
@@ -696,56 +762,94 @@ async function downloadAudioSegment(triggerDownload = true) {
 
 async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   if (buffers.length === 0) throw new Error("لا توجد ملفات صوتية للدمج");
-  
+
   const numberOfChannels = buffers[0].numberOfChannels;
   const sampleRate = buffers[0].sampleRate;
-  
-  // Calculate total duration at the adjusted speed
-  let totalDuration = 0;
-  buffers.forEach(b => totalDuration += b.duration);
-  const renderedDuration = totalDuration / speed;
 
-  // Optimization: If speed is 1, avoid Tone.js and use standard OfflineAudioContext
+  // Calculate total samples at the adjusted speed
+  let totalLengthSamples = 0;
+  buffers.forEach((b) => (totalLengthSamples += b.length));
+
+  // Optimization: If speed is 1, avoid Tone.js and use standard merging
   if (speed === 1) {
-    const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+    const mergedBuffer = audioContext.createBuffer(
       numberOfChannels,
-      Math.ceil(renderedDuration * sampleRate),
-      sampleRate
+      totalLengthSamples,
+      sampleRate,
     );
 
-    let startTime = 0;
-    for (const buffer of buffers) {
-      const source = offlineCtx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(offlineCtx.destination);
-      source.start(startTime);
-      startTime += buffer.duration;
-    }
-    return await offlineCtx.startRendering();
+    let offset = 0;
+    buffers.forEach((buffer) => {
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const sourceData = buffer.getChannelData(channel);
+        const targetData = mergedBuffer.getChannelData(channel);
+
+        for (let i = 0; i < buffer.length; i++) {
+          targetData[offset + i] = sourceData[i];
+        }
+      }
+      offset += buffer.length;
+    });
+
+    return mergedBuffer;
   }
 
-  // Use Tone.Offline for high-quality rendering
-  return await Tone.Offline(async () => {
-    let startTime = 0;
-    
-    for (const buffer of buffers) {
-      // GrainPlayer allows changing speed without changing pitch
-      const player = new Tone.GrainPlayer(buffer).toDestination();
-      
-      // Apply speed (playbackRate)
-      player.playbackRate = speed;
-      
-      // Ensure the grain size and overlap are suitable for speech
-      player.grainSize = 0.1;
-      player.overlap = 0.05;
-      
-      player.start(startTime);
-      startTime += (buffer.duration / speed);
+  // Use SoundTouchJS for high-quality time stretching
+  const st = new soundtouch.SoundTouch();
+  st.tempo = speed;
+
+  // Merge all buffers into one for SoundTouch processing
+  const sourceBuffer = audioContext.createBuffer(
+    numberOfChannels,
+    totalLengthSamples,
+    sampleRate,
+  );
+  let offset = 0;
+  buffers.forEach((buffer) => {
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      sourceBuffer.getChannelData(channel).set(buffer.getChannelData(channel), offset);
     }
-  }, renderedDuration, numberOfChannels, sampleRate);
+    offset += buffer.length;
+  });
+
+  let currentOffset = 0;
+  const source = {
+    extract: function (target, numFrames) {
+      const framesToExtract = Math.min(numFrames, totalLengthSamples - currentOffset);
+      for (let i = 0; i < framesToExtract; i++) {
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+          target[i * numberOfChannels + channel] = sourceBuffer.getChannelData(channel)[currentOffset + i];
+        }
+      }
+      currentOffset += framesToExtract;
+      return framesToExtract;
+    },
+  };
+
+  const filter = new soundtouch.SimpleFilter(source, st);
+  const resultLength = Math.ceil(totalLengthSamples / speed);
+  const resultBuffer = audioContext.createBuffer(numberOfChannels, resultLength, sampleRate);
+  
+  const samples = new Float32Array(resultLength * numberOfChannels);
+  let framesExtracted = 0;
+  
+  while (framesExtracted < resultLength) {
+    const framesToExtract = Math.min(1024, resultLength - framesExtracted);
+    const extracted = filter.extract(samples.subarray(framesExtracted * numberOfChannels), framesToExtract);
+    if (extracted === 0) break;
+    framesExtracted += extracted;
+  }
+
+  // Copy interleaved samples back to resultBuffer channels
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const channelData = resultBuffer.getChannelData(channel);
+    for (let i = 0; i < resultLength; i++) {
+      channelData[i] = samples[i * numberOfChannels + channel];
+    }
+  }
+
+  return resultBuffer;
 }
-
-
 
 function bufferToWave(audioBuffer) {
   const numChannels = audioBuffer.numberOfChannels;
@@ -755,7 +859,8 @@ function bufferToWave(audioBuffer) {
   const view = new DataView(buffer);
 
   const writeString = (view, offset, string) => {
-    for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+    for (let i = 0; i < string.length; i++)
+      view.setUint8(offset + i, string.charCodeAt(i));
   };
 
   writeString(view, 0, "RIFF");
@@ -775,8 +880,15 @@ function bufferToWave(audioBuffer) {
   let offset = 44;
   for (let i = 0; i < audioBuffer.length; i++) {
     for (let channel = 0; channel < numChannels; channel++) {
-      let sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      let sample = Math.max(
+        -1,
+        Math.min(1, audioBuffer.getChannelData(channel)[i]),
+      );
+      view.setInt16(
+        offset,
+        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+        true,
+      );
       offset += 2;
     }
   }
@@ -792,7 +904,10 @@ elements.endSurahSelect.addEventListener("change", () => {
   updateUrlParams();
 });
 elements.readerName.addEventListener("change", () => {
-  localStorage.setItem("selectedReaderIndex", elements.readerName.selectedIndex);
+  localStorage.setItem(
+    "selectedReaderIndex",
+    elements.readerName.selectedIndex,
+  );
   updateStoredSurahsList();
   updateUrlParams();
 });
@@ -805,35 +920,37 @@ elements.downloadBtn.addEventListener("click", downloadAudioSegment);
 
 // Speed control listeners
 if (elements.speedBtns) {
-  elements.speedBtns.forEach(btn => {
+  elements.speedBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       const speed = parseFloat(btn.dataset.speed);
-      
+
       // If we have a Howl playing, we might need to update its rate
       // But wait, our wavBlob ALREADY has the speed baked in!
-      // So if the user changes the speed AFTER downloading, 
+      // So if the user changes the speed AFTER downloading,
       // we should probably re-download/re-merge to bake the new speed in,
       // OR we just update the playback rate of the current audio.
-      
+
       if (elements.previewAudio) {
         // If speed is baked in, playbackRate should be 1.
         // If we want to change speed on the fly, we'd need to NOT bake it in.
         // But the user specifically wanted it baked in for the download.
-        
+
         // For now, let's just update the UI and the native element's rate
         // to show the user the speed is changing.
         elements.previewAudio.playbackRate = 1; // Keep it at 1 because it's baked in!
       }
-      
+
       // Update active state
-      elements.speedBtns.forEach(b => b.classList.remove("active"));
+      elements.speedBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      
+
       updateUrlParams();
-      
+
       // Inform the user that they need to re-download to apply new speed to the file
       if (!elements.previewAudio.classList.contains("d-none")) {
-        showInfo("لتطبيق السرعة الجديدة على الملف المحمل، يرجى الضغط على 'تحميل المقطع' مرة أخرى.");
+        showInfo(
+          "لتطبيق السرعة الجديدة على الملف المحمل، يرجى الضغط على 'تحميل المقطع' مرة أخرى.",
+        );
       }
     });
   });
@@ -844,5 +961,8 @@ initDatabase();
 // Global error handler for unhandled promise rejections
 window.addEventListener("unhandledrejection", (event) => {
   console.error("Unhandled promise rejection:", event.reason);
-  showStatus("حدث خطأ غير متوقع: " + (event.reason?.message || "يرجى المحاولة مرة أخرى"), "danger");
+  showStatus(
+    "حدث خطأ غير متوقع: " + (event.reason?.message || "يرجى المحاولة مرة أخرى"),
+    "danger",
+  );
 });
