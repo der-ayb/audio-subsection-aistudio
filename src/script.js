@@ -693,6 +693,7 @@ async function downloadAudioSegment(triggerDownload = true) {
 
     for (const item of ayahsToFetch) {
       const { surah, ayah } = item;
+      showStatus(`جاري معالجة الآية ${ayah} من ${ayahCount}...`, "info");
       let arrayBuffer = await getAyahFromCache(surah, ayah);
 
       if (!arrayBuffer) {

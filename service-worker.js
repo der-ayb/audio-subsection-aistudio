@@ -1,5 +1,5 @@
 importScripts(
-  "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js"
+  "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js",
 );
 
 if (workbox) {
@@ -47,37 +47,20 @@ if (workbox) {
     ],
     {
       ignoreURLParametersMatching: [/.*/],
-    }
+    },
   );
 
-  // Cache the Quran database with a CacheFirst strategy
+  // Serve Cached Resources
   workbox.routing.registerRoute(
-    ({ url }) => url.pathname.endsWith("quran.sqlite"),
+    ({ url }) => url.origin === self.location.origin,
     new workbox.strategies.CacheFirst({
-      cacheName: "database-cache",
+      cacheName: "static-cache",
       plugins: [
         new workbox.expiration.ExpirationPlugin({
-          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
+          maxAgeSeconds: 7 * 24 * 60 * 60, // Cache static resources for 7 days
         }),
       ],
-    })
-  );
-
-  // Cache audio files from GitHub with a CacheFirst strategy
-  workbox.routing.registerRoute(
-    ({ url }) => url.origin === "https://raw.githubusercontent.com" && url.pathname.endsWith(".mp3"),
-    new workbox.strategies.CacheFirst({
-      cacheName: "audio-cache",
-      plugins: [
-        new workbox.cacheableResponse.CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-        new workbox.expiration.ExpirationPlugin({
-          maxEntries: 500,
-          maxAgeSeconds: 60 * 60 * 24 * 60, // 60 Days
-        }),
-      ],
-    })
+    }),
   );
 
   // Cache-first for CDN files (Bootstrap, Icons, SQL.js, Tone.js)
@@ -95,37 +78,37 @@ if (workbox) {
           maxEntries: 100,
         }),
       ],
-    })
+    }),
   );
 
   // Serve HTML pages with Network First and offline fallback
   workbox.routing.registerRoute(
     ({ request }) => request.mode === "navigate",
-    new workbox.strategies.NetworkFirst({
-      cacheName: "pages-cache",
-      plugins: [
-        new workbox.expiration.ExpirationPlugin({
-          maxEntries: 50,
-        }),
-      ],
-    })
+    async ({ event }) => {
+      try {
+        const response = await workbox.strategies
+          .networkFirst({
+            cacheName: "pages-cache",
+            plugins: [
+              new workbox.expiration.ExpirationPlugin({
+                maxEntries: 50,
+              }),
+            ],
+          })
+          .handle({ event });
+        return response || (await caches.match("./index.html"));
+      } catch (error) {
+        return await caches.match("./index.html");
+      }
+    },
   );
-
-  // Offline fallback for navigation requests
-  workbox.routing.setCatchHandler(async ({ event }) => {
-    if (event.request.mode === "navigate") {
-      return (await caches.match("./app.html")) || Response.error();
-    }
-    return Response.error();
-  });
 
   // Clean up old/unused caches during activation
   self.addEventListener("activate", (event) => {
     const currentCaches = [
       workbox.core.cacheNames.precache,
-      "database-cache",
-      "audio-cache",
       "cdn-cache",
+      "static-cache",
       "pages-cache",
     ];
 
@@ -136,10 +119,9 @@ if (workbox) {
             if (!currentCaches.includes(cacheName)) {
               return caches.delete(cacheName);
             }
-          })
+          }),
         );
-      })
+      }),
     );
   });
 }
-

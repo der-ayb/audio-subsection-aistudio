@@ -1,21 +1,48 @@
 {
-  "name": "Quran Audio Snippet",
-  "short_name": "Quran Audio",
-  "description": "Select and download Quran audio snippets.",
-  "start_url": "./app.html",
+  "name": "مقتطف القرآن الصوتي",
+  "short_name": "مقتطف القرآن الصوتي",
+  "start_url": "/audio-subsection-aistudio/index.html",
+  "scope": "/audio-subsection-aistudio/",
   "display": "standalone",
-  "background_color": "#764ba2",
-  "theme_color": "#0d6efd",
+  "display_override": [
+    "window-controls-overlay"
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+quran",
+      "url": "/?q=%s"
+    }
+  ],
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4CAF50",
+  "description": "تطبيق ويب لتشغيل مقاطع صوتية من القرآن الكريم مع ميزات التنزيل والتشغيل دون اتصال.",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/quran/192/192",
+      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=128",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://picsum.photos/seed/quran/512/512",
+      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=512",
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=128",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": [
+    "education",
+    "productivity"
   ]
 }
