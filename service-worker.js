@@ -41,6 +41,10 @@ if (workbox) {
         revision: "1",
       },
       {
+        url: "https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js",
+        revision: "1",
+      },
+      {
         url: "https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js",
         revision: "1",
       },
