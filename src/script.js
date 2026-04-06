@@ -794,61 +794,31 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
     return mergedBuffer;
   }
 
-  // Use SoundTouchJS for high-quality time stretching
-  const st = new soundtouch.SoundTouch();
-  st.tempo = speed;
+  // Use Tone.Offline for high-quality rendering
+  const renderedDuration = totalLengthSamples / sampleRate / speed;
+  return await Tone.Offline(
+    async () => {
+      let startTime = 0;
 
-  // Merge all buffers into one for SoundTouch processing
-  const sourceBuffer = audioContext.createBuffer(
+      for (const buffer of buffers) {
+        // GrainPlayer allows changing speed without changing pitch
+        const player = new Tone.GrainPlayer(buffer).toDestination();
+
+        // Apply speed (playbackRate)
+        player.playbackRate = speed;
+
+        // Ensure the grain size and overlap are suitable for speech
+        player.grainSize = 0.1;
+        player.overlap = 0.05;
+
+        player.start(startTime);
+        startTime += buffer.duration / speed;
+      }
+    },
+    renderedDuration,
     numberOfChannels,
-    totalLengthSamples,
     sampleRate,
   );
-  let offset = 0;
-  buffers.forEach((buffer) => {
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      sourceBuffer.getChannelData(channel).set(buffer.getChannelData(channel), offset);
-    }
-    offset += buffer.length;
-  });
-
-  let currentOffset = 0;
-  const source = {
-    extract: function (target, numFrames) {
-      const framesToExtract = Math.min(numFrames, totalLengthSamples - currentOffset);
-      for (let i = 0; i < framesToExtract; i++) {
-        for (let channel = 0; channel < numberOfChannels; channel++) {
-          target[i * numberOfChannels + channel] = sourceBuffer.getChannelData(channel)[currentOffset + i];
-        }
-      }
-      currentOffset += framesToExtract;
-      return framesToExtract;
-    },
-  };
-
-  const filter = new soundtouch.SimpleFilter(source, st);
-  const resultLength = Math.ceil(totalLengthSamples / speed);
-  const resultBuffer = audioContext.createBuffer(numberOfChannels, resultLength, sampleRate);
-  
-  const samples = new Float32Array(resultLength * numberOfChannels);
-  let framesExtracted = 0;
-  
-  while (framesExtracted < resultLength) {
-    const framesToExtract = Math.min(1024, resultLength - framesExtracted);
-    const extracted = filter.extract(samples.subarray(framesExtracted * numberOfChannels), framesToExtract);
-    if (extracted === 0) break;
-    framesExtracted += extracted;
-  }
-
-  // Copy interleaved samples back to resultBuffer channels
-  for (let channel = 0; channel < numberOfChannels; channel++) {
-    const channelData = resultBuffer.getChannelData(channel);
-    for (let i = 0; i < resultLength; i++) {
-      channelData[i] = samples[i * numberOfChannels + channel];
-    }
-  }
-
-  return resultBuffer;
 }
 
 function bufferToWave(audioBuffer) {
