@@ -41,7 +41,7 @@ if (workbox) {
         revision: "1",
       },
       {
-        url: "https://cdnjs.cloudflare.com/ajax/libs/tone/15.3.5/Tone.js",
+        url: "https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js",
         revision: "1",
       },
     ],
