@@ -767,54 +767,47 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   const numberOfChannels = buffers[0].numberOfChannels;
   const sampleRate = buffers[0].sampleRate;
 
-  // Calculate total samples at the adjusted speed
+  // Calculate total samples at 1x speed
   let totalLengthSamples = 0;
   buffers.forEach((b) => (totalLengthSamples += b.length));
 
-  // Optimization: If speed is 1, avoid Tone.js and use standard merging
+  // Create the 1x merged buffer
+  const mergedBuffer = audioContext.createBuffer(
+    numberOfChannels,
+    totalLengthSamples,
+    sampleRate,
+  );
+
+  let offset = 0;
+  buffers.forEach((buffer) => {
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      const sourceData = buffer.getChannelData(channel);
+      const targetData = mergedBuffer.getChannelData(channel);
+      targetData.set(sourceData, offset);
+    }
+    offset += buffer.length;
+  });
+
+  // If speed is 1, we are done
   if (speed === 1) {
-    const mergedBuffer = audioContext.createBuffer(
-      numberOfChannels,
-      totalLengthSamples,
-      sampleRate,
-    );
-
-    let offset = 0;
-    buffers.forEach((buffer) => {
-      for (let channel = 0; channel < numberOfChannels; channel++) {
-        const sourceData = buffer.getChannelData(channel);
-        const targetData = mergedBuffer.getChannelData(channel);
-
-        for (let i = 0; i < buffer.length; i++) {
-          targetData[offset + i] = sourceData[i];
-        }
-      }
-      offset += buffer.length;
-    });
-
     return mergedBuffer;
   }
 
-  // Use Tone.Offline for high-quality rendering
+  // Use Tone.Offline to apply speed to the TOTAL merged buffer
   const renderedDuration = totalLengthSamples / sampleRate / speed;
   return await Tone.Offline(
-    async () => {
-      let startTime = 0;
+    () => {
+      // GrainPlayer allows changing speed without changing pitch
+      const player = new Tone.GrainPlayer(mergedBuffer).toDestination();
 
-      for (const buffer of buffers) {
-        // GrainPlayer allows changing speed without changing pitch
-        const player = new Tone.GrainPlayer(buffer).toDestination();
+      // Apply speed (playbackRate)
+      player.playbackRate = speed;
 
-        // Apply speed (playbackRate)
-        player.playbackRate = speed;
+      // Ensure the grain size and overlap are suitable for speech
+      player.grainSize = 0.1;
+      player.overlap = 0.05;
 
-        // Ensure the grain size and overlap are suitable for speech
-        player.grainSize = 0.1;
-        player.overlap = 0.05;
-
-        player.start(startTime);
-        startTime += buffer.duration / speed;
-      }
+      player.start(0);
     },
     renderedDuration,
     numberOfChannels,
