@@ -804,8 +804,9 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
       player.playbackRate = speed;
 
       // Ensure the grain size and overlap are suitable for speech
-      // player.grainSize = 0.1;
-      // player.overlap = 0.05;
+      player.grainSize = 0.25;
+      player.overlap = 0.05;
+      player.detune = 0
 
       player.start(0);
     },
