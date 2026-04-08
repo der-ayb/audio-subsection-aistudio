@@ -311,6 +311,7 @@ function showStatus(message, type = "info") {
           : "info-circle"
     }"></i> ${message}`;
     elements.statusAlert.classList.remove("d-none");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 }
 
@@ -318,6 +319,7 @@ function showInfo(message) {
   if (elements.infoBox) {
     elements.infoBox.innerHTML = `<i class="bi bi-info-circle"></i> ${message}`;
     elements.infoBox.classList.remove("d-none");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 }
 
