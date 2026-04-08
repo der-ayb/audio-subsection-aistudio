@@ -94,7 +94,7 @@ function updateOnlineStatus() {
     elements.onlineIndicator.className = `online-indicator ${isOnline ? "online" : "offline"}`;
     elements.onlineIndicator.innerHTML = isOnline
       ? '<i class="bi bi-wifi"></i> متصل بالإنترنت'
-      : '<i class="bi bi-wifi-off"></i> وضع عدم الاتصال';
+      : '<i class="bi bi-wifi-off"></i> غير متصل';
   }
 }
 
@@ -303,47 +303,23 @@ function showStatus(message, type = "info") {
   const alertClass = `alert-${type}`;
   if (elements.statusAlert) {
     elements.statusAlert.className = `alert ${alertClass} mt-3`;
-    elements.statusAlert.innerHTML = `
-      <i class="bi bi-${
-        type === "success"
-          ? "check-circle-fill"
-          : type === "danger"
-            ? "exclamation-triangle-fill"
-            : "info-circle-fill"
-      }"></i>
-      <div class="flex-grow-1">${message}</div>
-      <button type="button" class="btn-close" onclick="hideAlert('statusAlert')" aria-label="Close"></button>
-    `;
+    elements.statusAlert.innerHTML = `<i class="bi bi-${
+      type === "success"
+        ? "check-circle"
+        : type === "danger"
+          ? "x-circle"
+          : "info-circle"
+    }"></i> ${message}`;
     elements.statusAlert.classList.remove("d-none");
-
-    // Auto-hide success messages after 5 seconds
-    if (type === "success") {
-      setTimeout(() => {
-        hideAlert("statusAlert");
-      }, 5000);
-    }
   }
 }
 
 function showInfo(message) {
   if (elements.infoBox) {
-    elements.infoBox.className = "alert alert-info mt-3";
-    elements.infoBox.innerHTML = `
-      <i class="bi bi-info-circle-fill"></i>
-      <div class="flex-grow-1">${message}</div>
-      <button type="button" class="btn-close" onclick="hideAlert('infoBox')" aria-label="Close"></button>
-    `;
+    elements.infoBox.innerHTML = `<i class="bi bi-info-circle"></i> ${message}`;
     elements.infoBox.classList.remove("d-none");
   }
 }
-
-function hideAlert(elementId) {
-  const element = document.getElementById(elementId);
-  if (element) {
-    element.classList.add("d-none");
-  }
-}
-window.hideAlert = hideAlert;
 
 // URL Parameter Handling
 function getUrlParams() {
