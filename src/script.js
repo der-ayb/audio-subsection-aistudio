@@ -693,7 +693,7 @@ async function downloadAudioSegment(triggerDownload = true) {
 
     for (const item of ayahsToFetch) {
       const { surah, ayah } = item;
-      showStatus(`جاري معالجة الآية ${ayah} من ${ayahCount}...`, "info");
+      showStatus(`جاري معالجة الآية ${ayah-ayahsToFetch.length+1} من ${ayahCount}...`, "info");
       let arrayBuffer = await getAyahFromCache(surah, ayah);
 
       if (!arrayBuffer) {
@@ -804,8 +804,8 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
       player.playbackRate = speed;
 
       // Ensure the grain size and overlap are suitable for speech
-      player.grainSize = 0.25;
-      player.overlap = 0.05;
+      player.grainSize = 0.3;
+      player.overlap = 0.1;
       player.detune = 0
 
       player.start(0);

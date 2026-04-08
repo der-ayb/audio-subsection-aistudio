@@ -3,7 +3,7 @@ let sw_path = null;
 if ("serviceWorker" in navigator) {
   // Use development service worker if on localhost or ais-dev
   const isDev = window.location.hostname === "localhost" || 
-                window.location.hostname.includes("ais-dev");
+                window.location.hostname.includes("ngrok-free");
   sw_path = isDev ? "./dev-service-worker.js" : "./service-worker.js";
   console.log(`Registering ${isDev ? "Development" : "Production"} Service Worker: ${sw_path}`);
 }
