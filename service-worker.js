@@ -17,7 +17,7 @@ if (workbox) {
       { url: "./app.html", revision: "1" },
       { url: "./manifest.json", revision: "1" },
       { url: "./src/style.css", revision: "1" },
-      { url: "./src/script.js", revision: "1" },
+      { url: "./src/script.js", revision: "2" },
       { url: "./install.js", revision: "1" },
       { url: "./assets/quran.sqlite", revision: "1" },
       {
