@@ -14,10 +14,10 @@ if (workbox) {
     [
       { url: "./", revision: "1" },
       { url: "./index.html", revision: "1" },
-      { url: "./app.html", revision: "1" },
-      { url: "./manifest.json", revision: "1" },
-      { url: "./src/style.css", revision: "1" },
-      { url: "./src/script.js", revision: "3" },
+      { url: "./app.html", revision: "2" },
+      { url: "./manifest.json", revision: "2" },
+      { url: "./src/style.css", revision: "2" },
+      { url: "./src/script.js", revision: "4" },
       { url: "./install.js", revision: "1" },
       { url: "./assets/quran.sqlite", revision: "1" },
       {
