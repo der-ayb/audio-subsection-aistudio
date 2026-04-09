@@ -19,7 +19,7 @@
   "description": "تطبيق ويب لتشغيل مقاطع صوتية من القرآن الكريم مع ميزات التنزيل والتشغيل دون اتصال.",
   "icons": [
     {
-      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=128",
+      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=192",
       "sizes": "192x192",
       "type": "image/png"
     },
@@ -31,7 +31,7 @@
   ],
   "screenshots": [
     {
-      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=128",
+      "src": "https://cdn.aptoide.com/imgs/9/d/b/9dbdb0741ed389660e2d626448036614_icon.png?w=192",
       "sizes": "192x192",
       "type": "image/png"
     },

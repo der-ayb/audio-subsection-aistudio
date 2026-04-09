@@ -78,7 +78,6 @@ const elements = {
   progressBar: document.getElementById("progressBar"),
   storedCount: document.getElementById("storedCount"),
   surahCheckboxes: document.getElementById("surahCheckboxes"),
-  onlineIndicator: document.getElementById("onlineIndicator"),
   readerName: document.getElementById("readerName"),
   speedControl: document.getElementById("speedControl"),
   speedBtns: document.querySelectorAll(".speed-btn"),
@@ -86,21 +85,6 @@ const elements = {
   deselectAllBtn: document.getElementById("deselectAllBtn"),
   clearAllBtn: document.getElementById("clearAllBtn"),
 };
-
-// Online/Offline Detection
-function updateOnlineStatus() {
-  const isOnline = navigator.onLine;
-  if (elements.onlineIndicator) {
-    elements.onlineIndicator.className = `online-indicator ${isOnline ? "online" : "offline"}`;
-    elements.onlineIndicator.innerHTML = isOnline
-      ? '<i class="bi bi-wifi"></i> متصل بالإنترنت'
-      : '<i class="bi bi-wifi-off"></i> غير متصل';
-  }
-}
-
-window.addEventListener("online", updateOnlineStatus);
-window.addEventListener("offline", updateOnlineStatus);
-updateOnlineStatus();
 
 // IndexedDB functions
 let dbInstance = null;
@@ -502,7 +486,6 @@ function updateEndSurahOptions() {
 
   elements.endSurahSelect.value = startSurah;
   loadAyasForEndSurah();
-
 }
 
 async function loadAyasForEndSurah() {
