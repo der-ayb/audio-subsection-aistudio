@@ -303,13 +303,12 @@ function showStatus(message, type = "info") {
   const alertClass = `alert-${type}`;
   if (elements.statusAlert) {
     elements.statusAlert.className = `alert ${alertClass} mt-3`;
-    elements.statusAlert.innerHTML = `<i class="bi bi-${
-      type === "success"
+    elements.statusAlert.innerHTML = `<i class="bi bi-${type === "success"
         ? "check-circle"
         : type === "danger"
           ? "x-circle"
           : "info-circle"
-    }"></i> ${message}`;
+      }"></i> ${message}`;
     elements.statusAlert.classList.remove("d-none");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -501,10 +500,9 @@ function updateEndSurahOptions() {
     option.hidden = surahId < startSurah;
   });
 
-  if (currentEndSurah < startSurah) {
-    elements.endSurahSelect.value = startSurah;
-    loadAyasForEndSurah();
-  }
+  elements.endSurahSelect.value = startSurah;
+  loadAyasForEndSurah();
+
 }
 
 async function loadAyasForEndSurah() {
@@ -695,8 +693,8 @@ async function downloadAudioSegment(triggerDownload = true) {
 
     for (const item of ayahsToFetch) {
       const { surah, ayah } = item;
-      
-      showStatus(`جاري معالجة الآية ${ayah-ayahsToFetch.length+1} من ${ayahCount}...`, "info");
+
+      showStatus(`جاري معالجة الآية ${ayah - ayahsToFetch[0].ayah + 1} من ${ayahCount}...`, "info");
       let arrayBuffer = await getAyahFromCache(surah, ayah);
 
       if (!arrayBuffer) {
