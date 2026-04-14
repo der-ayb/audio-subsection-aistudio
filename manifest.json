@@ -1,8 +1,8 @@
 {
   "name": "مقتطف القرآن الصوتي",
   "short_name": "مقتطف القرآن الصوتي",
-  "start_url": "/audio-subsection-aistudio/index.html",
-  "scope": "/audio-subsection-aistudio/",
+  "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "display_override": [
     "window-controls-overlay"
