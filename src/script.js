@@ -70,7 +70,6 @@ const elements = {
   startAyaSelect: document.getElementById("startAyaSelect"),
   endAyaSelect: document.getElementById("endAyaSelect"),
   downloadBtn: document.getElementById("downloadBtn"),
-  shareBtn: document.getElementById("shareBtn"),
   statusAlert: document.getElementById("statusAlert"),
   infoBox: document.getElementById("infoBox"),
   previewAudio: document.getElementById("preview"),
@@ -338,10 +337,6 @@ function updateUrlParams() {
 
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState({}, "", newUrl);
-
-  if (elements.shareBtn) {
-    elements.shareBtn.href = newUrl;
-  }
 }
 
 async function applyUrlParams() {
