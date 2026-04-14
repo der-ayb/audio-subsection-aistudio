@@ -70,6 +70,7 @@ const elements = {
   startAyaSelect: document.getElementById("startAyaSelect"),
   endAyaSelect: document.getElementById("endAyaSelect"),
   downloadBtn: document.getElementById("downloadBtn"),
+  shareBtn: document.getElementById("shareBtn"),
   statusAlert: document.getElementById("statusAlert"),
   infoBox: document.getElementById("infoBox"),
   previewAudio: document.getElementById("preview"),
@@ -337,6 +338,10 @@ function updateUrlParams() {
 
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState({}, "", newUrl);
+
+  if (elements.shareBtn) {
+    elements.shareBtn.href = newUrl;
+  }
 }
 
 async function applyUrlParams() {
@@ -363,6 +368,17 @@ async function applyUrlParams() {
       elements.speedBtns.forEach((b) => b.classList.remove("active"));
       speedBtn.classList.add("active");
     }
+  } else {
+    const savedSpeed = localStorage.getItem("selectedSpeed");
+    if (savedSpeed !== null) {
+      const speedBtn = Array.from(elements.speedBtns).find(
+        (btn) => btn.dataset.speed === savedSpeed,
+      );
+      if (speedBtn) {
+        elements.speedBtns.forEach((b) => b.classList.remove("active"));
+        speedBtn.classList.add("active");
+      }
+    }
   }
 
   if (params.ss !== null) {
@@ -383,6 +399,8 @@ async function applyUrlParams() {
       elements.endAyaSelect.value = params.ea;
     }
   }
+
+  updateUrlParams();
 }
 
 async function initDatabase() {
@@ -893,6 +911,7 @@ if (elements.speedBtns) {
       elements.speedBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
+      localStorage.setItem("selectedSpeed", btn.dataset.speed);
       updateUrlParams();
 
       // Inform the user that they need to re-download to apply new speed to the file
