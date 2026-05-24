@@ -287,13 +287,12 @@ function showStatus(message, type = "info") {
   const alertClass = `alert-${type}`;
   if (elements.statusAlert) {
     elements.statusAlert.className = `alert ${alertClass} mt-3`;
-    elements.statusAlert.innerHTML = `<i class="bi bi-${
-      type === "success"
+    elements.statusAlert.innerHTML = `<i class="bi bi-${type === "success"
         ? "check-circle"
         : type === "danger"
           ? "x-circle"
           : "info-circle"
-    }"></i> ${message}`;
+      }"></i> ${message}`;
     elements.statusAlert.classList.remove("d-none");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -691,10 +690,7 @@ async function downloadAudioSegment(triggerDownload = true) {
     for (const item of ayahsToFetch) {
       const { surah, ayah } = item;
 
-      showStatus(
-        `جاري معالجة الآية ${ayah - ayahsToFetch[0].ayah + 1} من ${ayahCount}...`,
-        "info",
-      );
+      showStatus(`جاري معالجة الآية ${ayah - ayahsToFetch[0].ayah + 1} من ${ayahCount}...`, "info");
       let arrayBuffer = await getAyahFromCache(surah, ayah);
 
       if (!arrayBuffer) {
@@ -731,6 +727,7 @@ async function downloadAudioSegment(triggerDownload = true) {
     );
     showStatus("جاري ترميز الصوت...", "info");
     const wavBlob = bufferToWave(mergedBuffer);
+
     const previewUrl = URL.createObjectURL(wavBlob);
 
     elements.previewAudio.src = previewUrl;
@@ -740,10 +737,12 @@ async function downloadAudioSegment(triggerDownload = true) {
     elements.previewAudio.playbackRate = 1; // Speed is already baked into the wavBlob!
 
     if (triggerDownload) {
-      const response = await fetch(previewUrl);
-      const blob = await response.blob();
-      const file = new File([blob], "quran.wav", { type: blob.type });
-      download(file, "quran.wav", "audio/wav");
+      const a = document.createElement("a");
+      a.href = previewUrl;
+      a.download = `quran.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       showStatus("اكتمل التحميل! المعاينة متاحة أدناه.", "success");
     } else {
       showStatus("تم التجهيز! يمكنك الاستماع الآن.", "success");
@@ -804,7 +803,7 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
       // Ensure the grain size and overlap are suitable for speech
       player.grainSize = 0.3;
       player.overlap = 0.1;
-      player.detune = 0;
+      player.detune = 0
 
       player.start(0);
     },
