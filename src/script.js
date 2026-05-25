@@ -764,9 +764,16 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   const numberOfChannels = buffers[0].numberOfChannels;
   const sampleRate = buffers[0].sampleRate;
 
-  // Calculate total samples at 1x speed
+  // Calculate total samples at 1x speed, adding 1 silent second after each ayah and 2 silent seconds after the last ayah
   let totalLengthSamples = 0;
-  buffers.forEach((b) => (totalLengthSamples += b.length));
+  buffers.forEach((b, index) => {
+    totalLengthSamples += b.length;
+    if (index === buffers.length - 1) {
+      totalLengthSamples += sampleRate * 2; // 2 silent seconds after the last ayah
+    } else {
+      totalLengthSamples += sampleRate * 1; // 1 silent second after each other ayah
+    }
+  });
 
   // Create the 1x merged buffer
   const mergedBuffer = audioContext.createBuffer(
@@ -776,13 +783,18 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   );
 
   let offset = 0;
-  buffers.forEach((buffer) => {
+  buffers.forEach((buffer, index) => {
     for (let channel = 0; channel < numberOfChannels; channel++) {
       const sourceData = buffer.getChannelData(channel);
       const targetData = mergedBuffer.getChannelData(channel);
       targetData.set(sourceData, offset);
     }
     offset += buffer.length;
+    if (index === buffers.length - 1) {
+      offset += sampleRate * 2;
+    } else {
+      offset += sampleRate * 1;
+    }
   });
 
   // If speed is 1, we are done
