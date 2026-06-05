@@ -149,13 +149,13 @@
             <div id="flush-collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionFlushExample">
               <div class="accordion-body">
                 <div class="form-check form-switch mb-2">
-                  <input class="form-check-input" type="checkbox" role="switch" id="convertToWavSwitch" checked>
-                  <label class="form-check-label" for="convertToWavSwitch">التحويل إلى صيغة wav (دعم تعديل السرعة والفترات الصامتة)</label>
+                  <input class="form-check-input" type="checkbox" role="switch" id="convertToWavSwitch">
+                  <label class="form-check-label" for="convertToWavSwitch">تصدير بصيغة WAV (الافتراضي هو MP3 مع كامل الميزات)</label>
                 </div>
                 <small class="text-muted d-block">
-                  * عند تفعيل الخيار: يتم دمج الآيات وتطبيق سرعة التشغيل وإضافة الفترات الصامتة (1 ثانية بين الآيات و 2 ثانية في النهاية) وتصدير الملف بصيغة WAV.
+                  * بشكل افتراضي (إيقاف تشغيل الخيار): يتم تصدير المقطع مدمجاً ومعدل السرعة مع الفترات الصامتة بصيغة <strong>MP3</strong>.
                   <br>
-                  * عند إلغاء الخيار: يتم دمج الآيات بسرعة فائقة بصيغة MP3 الأصلية (لا يدعم تعديل السرعة أو الفترات الصامتة).
+                  * عند تفعيل الخيار: يتم التصدير بصيغة <strong>WAV</strong> مع نفس الميزات (السرعة والفترات الصامتة).
                 </small>
               </div>
             </div>
@@ -175,6 +175,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.3.5/Tone.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.all.min.js"></script>
   <script src="install.js"></script>
   <script src="src/script.js"></script>
 </body>

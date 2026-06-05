@@ -14,10 +14,10 @@ if (workbox) {
     [
       { url: "./", revision: "1" },
       { url: "./index.html", revision: "1" },
-      { url: "./app.html", revision: "2" },
+      { url: "./app.html", revision: "3" },
       { url: "./manifest.json", revision: "1" },
       { url: "./src/style.css", revision: "1" },
-      { url: "./src/script.js", revision: "5" },
+      { url: "./src/script.js", revision: "6" },
       { url: "./install.js", revision: "1" },
       { url: "./assets/quran.sqlite", revision: "1" },
       {
@@ -42,6 +42,10 @@ if (workbox) {
       },
       {
         url: "https://cdnjs.cloudflare.com/ajax/libs/tone/15.3.5/Tone.js",
+        revision: "1",
+      },
+      {
+        url: "https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.all.min.js",
         revision: "1",
       },
     ],

@@ -661,19 +661,14 @@ async function downloadAudioSegment(triggerDownload = true) {
     elements.infoBox.classList.add("d-none");
 
     const audioBuffers = [];
-    const rawMp3Buffers = [];
     const audioContext = new (
       window.AudioContext || window.webkitAudioContext
     )();
 
-    const shouldConvertToWav = elements.convertToWavSwitch ? elements.convertToWavSwitch.checked : true;
+    const shouldConvertToWav = elements.convertToWavSwitch ? elements.convertToWavSwitch.checked : false;
     const currentSpeed = parseFloat(
       document.querySelector(".speed-btn.active")?.dataset.speed || "1",
     );
-
-    if (!shouldConvertToWav && currentSpeed !== 1) {
-      showInfo(`تنبيه: لتطبيق سرعة التشغيل المحددة (${currentSpeed}x) على الملف المحمل، يرجى تفعيل خيار "التحويل إلى صيغة wav" من الخيارات الإضافية. سيتم الدمج بالسرعة العادية بصيغة MP3.`);
-    }
 
     // Collect all ayahs across surahs
     const ayahsToFetch = [];
@@ -723,31 +718,27 @@ async function downloadAudioSegment(triggerDownload = true) {
         arrayBuffer = await response.arrayBuffer();
       }
 
-      if (!shouldConvertToWav) {
-        // Clone the arrayBuffer before any potential operations or decoding
-        rawMp3Buffers.push(arrayBuffer.slice(0));
-      } else {
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        audioBuffers.push(audioBuffer);
-      }
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      audioBuffers.push(audioBuffer);
     }
+
+    showStatus("جاري دمج الآيات وتطبيق المؤثرات...", "info");
+    const mergedBuffer = await mergeAudioBuffers(
+      audioContext,
+      audioBuffers,
+      currentSpeed,
+    );
 
     let finalBlob;
     let fileExtension;
 
     if (shouldConvertToWav) {
-      showStatus("جاري دمج الآيات...", "info");
-      const mergedBuffer = await mergeAudioBuffers(
-        audioContext,
-        audioBuffers,
-        currentSpeed,
-      );
-      showStatus("جاري ترميز الصوت...", "info");
+      showStatus("جاري ترميز الملف بصيغة WAV...", "info");
       finalBlob = bufferToWave(mergedBuffer);
       fileExtension = "wav";
     } else {
-      showStatus("جاري تجميع ملف MP3 المدمج...", "info");
-      finalBlob = new Blob(rawMp3Buffers, { type: "audio/mp3" });
+      showStatus("جاري ترميز الملف بصيغة MP3...", "info");
+      finalBlob = bufferToMp3(mergedBuffer);
       fileExtension = "mp3";
     }
 
@@ -756,11 +747,7 @@ async function downloadAudioSegment(triggerDownload = true) {
     elements.previewAudio.src = previewUrl;
     elements.previewAudio.classList.remove("d-none");
 
-    if (shouldConvertToWav) {
-      elements.previewAudio.playbackRate = 1; // Speed is already baked into the wavBlob!
-    } else {
-      elements.previewAudio.playbackRate = currentSpeed; // Browser native speed-up
-    }
+    elements.previewAudio.playbackRate = 1; // Speed is already baked into the file!
 
     if (triggerDownload) {
       const a = document.createElement("a");
@@ -896,6 +883,60 @@ function bufferToWave(audioBuffer) {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
+function bufferToMp3(audioBuffer) {
+  if (typeof lamejs === "undefined") {
+    throw new Error(
+      "لم يتم تحميل مكتبة ترميز MP3. يرجى التحقق من الاتصال بالإنترنت، أو تفعيل خيار التصدير بصيغة WAV.",
+    );
+  }
+
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const leftChannel = audioBuffer.getChannelData(0);
+  const rightChannel = numberOfChannels > 1 ? audioBuffer.getChannelData(1) : null;
+
+  const mp3encoder = new lamejs.Mp3Encoder(numberOfChannels, sampleRate, 128);
+  const mp3Data = [];
+
+  // Convert float to 16bit PCM
+  const leftInt16 = new Int16Array(leftChannel.length);
+  for (let i = 0; i < leftChannel.length; i++) {
+    let s = Math.max(-1, Math.min(1, leftChannel[i]));
+    leftInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+
+  let rightInt16 = null;
+  if (rightChannel) {
+    rightInt16 = new Int16Array(rightChannel.length);
+    for (let i = 0; i < rightChannel.length; i++) {
+      let s = Math.max(-1, Math.min(1, rightChannel[i]));
+      rightInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+  }
+
+  const chunkSize = 11520;
+  for (let i = 0; i < leftInt16.length; i += chunkSize) {
+    const leftChunk = leftInt16.subarray(i, i + chunkSize);
+    let mp3buf;
+    if (rightInt16) {
+      const rightChunk = rightInt16.subarray(i, i + chunkSize);
+      mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+    } else {
+      mp3buf = mp3encoder.encodeBuffer(leftChunk);
+    }
+    if (mp3buf.length > 0) {
+      mp3Data.push(mp3buf);
+    }
+  }
+
+  const mp3buf = mp3encoder.flush();
+  if (mp3buf.length > 0) {
+    mp3Data.push(mp3buf);
+  }
+
+  return new Blob(mp3Data, { type: "audio/mp3" });
+}
+
 elements.startSurahSelect.addEventListener("change", () => {
   loadAyasForStartSurah();
   updateUrlParams();
@@ -932,12 +973,7 @@ if (elements.speedBtns) {
       // OR we just update the playback rate of the current audio.
 
       if (elements.previewAudio) {
-        const shouldConvertToWav = elements.convertToWavSwitch ? elements.convertToWavSwitch.checked : true;
-        if (shouldConvertToWav) {
-          elements.previewAudio.playbackRate = 1; // Keep at 1 because speed is baked into the custom WAV!
-        } else {
-          elements.previewAudio.playbackRate = speed; // Native browser speed adjustment for MP3
-        }
+        elements.previewAudio.playbackRate = 1; // Keep at 1 because speed is baked in both WAV & MP3 formats!
       }
 
       // Update active state
