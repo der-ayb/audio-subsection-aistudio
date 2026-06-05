@@ -377,6 +377,12 @@ async function applyUrlParams() {
     }
   }
 
+  // Load convertToWav selection from localStorage
+  const savedConvertToWav = localStorage.getItem("selectedConvertToWav");
+  if (savedConvertToWav !== null && elements.convertToWavSwitch) {
+    elements.convertToWavSwitch.checked = savedConvertToWav === "true";
+  }
+
   if (params.ss !== null) {
     elements.startSurahSelect.value = params.ss;
     await loadAyasForStartSurah();
@@ -778,14 +784,12 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   const numberOfChannels = buffers[0].numberOfChannels;
   const sampleRate = buffers[0].sampleRate;
 
-  // Calculate total samples at 1x speed, adding 1 silent second after each ayah and 2 silent seconds after the last ayah
+  // Calculate total samples at 1x speed, adding 2 silent seconds after the last ayah
   let totalLengthSamples = 0;
   buffers.forEach((b, index) => {
     totalLengthSamples += b.length;
     if (index === buffers.length - 1) {
       totalLengthSamples += sampleRate * 2; // 2 silent seconds after the last ayah
-    } else {
-      totalLengthSamples += sampleRate * 1; // 1 silent second after each other ayah
     }
   });
 
@@ -806,8 +810,6 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
     offset += buffer.length;
     if (index === buffers.length - 1) {
       offset += sampleRate * 2;
-    } else {
-      offset += sampleRate * 1;
     }
   });
 
@@ -959,6 +961,12 @@ elements.startAyaSelect.addEventListener("change", () => {
 });
 elements.endAyaSelect.addEventListener("change", updateUrlParams);
 elements.downloadBtn.addEventListener("click", downloadAudioSegment);
+
+if (elements.convertToWavSwitch) {
+  elements.convertToWavSwitch.addEventListener("change", () => {
+    localStorage.setItem("selectedConvertToWav", elements.convertToWavSwitch.checked ? "true" : "false");
+  });
+}
 
 // Speed control listeners
 if (elements.speedBtns) {
