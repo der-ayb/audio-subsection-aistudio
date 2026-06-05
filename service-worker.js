@@ -14,7 +14,7 @@ if (workbox) {
     [
       { url: "./", revision: "1" },
       { url: "./index.html", revision: "1" },
-      { url: "./app.html", revision: "1" },
+      { url: "./app.html", revision: "2" },
       { url: "./manifest.json", revision: "1" },
       { url: "./src/style.css", revision: "1" },
       { url: "./src/script.js", revision: "5" },

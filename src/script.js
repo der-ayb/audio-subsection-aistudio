@@ -84,6 +84,7 @@ const elements = {
   selectAllBtn: document.getElementById("selectAllBtn"),
   deselectAllBtn: document.getElementById("deselectAllBtn"),
   clearAllBtn: document.getElementById("clearAllBtn"),
+  convertToWavSwitch: document.getElementById("convertToWavSwitch"),
 };
 
 // IndexedDB functions
@@ -660,9 +661,19 @@ async function downloadAudioSegment(triggerDownload = true) {
     elements.infoBox.classList.add("d-none");
 
     const audioBuffers = [];
+    const rawMp3Buffers = [];
     const audioContext = new (
       window.AudioContext || window.webkitAudioContext
     )();
+
+    const shouldConvertToWav = elements.convertToWavSwitch ? elements.convertToWavSwitch.checked : true;
+    const currentSpeed = parseFloat(
+      document.querySelector(".speed-btn.active")?.dataset.speed || "1",
+    );
+
+    if (!shouldConvertToWav && currentSpeed !== 1) {
+      showInfo(`تنبيه: لتطبيق سرعة التشغيل المحددة (${currentSpeed}x) على الملف المحمل، يرجى تفعيل خيار "التحويل إلى صيغة wav" من الخيارات الإضافية. سيتم الدمج بالسرعة العادية بصيغة MP3.`);
+    }
 
     // Collect all ayahs across surahs
     const ayahsToFetch = [];
@@ -712,34 +723,49 @@ async function downloadAudioSegment(triggerDownload = true) {
         arrayBuffer = await response.arrayBuffer();
       }
 
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      audioBuffers.push(audioBuffer);
+      if (!shouldConvertToWav) {
+        // Clone the arrayBuffer before any potential operations or decoding
+        rawMp3Buffers.push(arrayBuffer.slice(0));
+      } else {
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        audioBuffers.push(audioBuffer);
+      }
     }
 
-    showStatus("جاري دمج الآيات...", "info");
-    const currentSpeed = parseFloat(
-      document.querySelector(".speed-btn.active")?.dataset.speed || "1",
-    );
-    const mergedBuffer = await mergeAudioBuffers(
-      audioContext,
-      audioBuffers,
-      currentSpeed,
-    );
-    showStatus("جاري ترميز الصوت...", "info");
-    const wavBlob = bufferToWave(mergedBuffer);
+    let finalBlob;
+    let fileExtension;
 
-    const previewUrl = URL.createObjectURL(wavBlob);
+    if (shouldConvertToWav) {
+      showStatus("جاري دمج الآيات...", "info");
+      const mergedBuffer = await mergeAudioBuffers(
+        audioContext,
+        audioBuffers,
+        currentSpeed,
+      );
+      showStatus("جاري ترميز الصوت...", "info");
+      finalBlob = bufferToWave(mergedBuffer);
+      fileExtension = "wav";
+    } else {
+      showStatus("جاري تجميع ملف MP3 المدمج...", "info");
+      finalBlob = new Blob(rawMp3Buffers, { type: "audio/mp3" });
+      fileExtension = "mp3";
+    }
+
+    const previewUrl = URL.createObjectURL(finalBlob);
 
     elements.previewAudio.src = previewUrl;
     elements.previewAudio.classList.remove("d-none");
 
-    // Apply current speed to the native element for UI consistency
-    elements.previewAudio.playbackRate = 1; // Speed is already baked into the wavBlob!
+    if (shouldConvertToWav) {
+      elements.previewAudio.playbackRate = 1; // Speed is already baked into the wavBlob!
+    } else {
+      elements.previewAudio.playbackRate = currentSpeed; // Browser native speed-up
+    }
 
     if (triggerDownload) {
       const a = document.createElement("a");
       a.href = previewUrl;
-      a.download = `quran.wav`;
+      a.download = `quran.${fileExtension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -749,7 +775,8 @@ async function downloadAudioSegment(triggerDownload = true) {
       elements.previewAudio.play();
     }
 
-    showInfo(`تم دمج ${ayahCount} آية بنجاح`);
+    const fileFormatName = fileExtension.toUpperCase();
+    showInfo(`تم دمج ${ayahCount} آية بنجاح بصيغة ${fileFormatName}`);
   } catch (error) {
     showStatus(`خطأ: ${error.message}`, "danger");
     console.error(error);
@@ -769,8 +796,10 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   buffers.forEach((b, index) => {
     totalLengthSamples += b.length;
     if (index === buffers.length - 1) {
-      totalLengthSamples += sampleRate * 3; // 3 silent seconds after the last ayah
-    } 
+      totalLengthSamples += sampleRate * 2; // 2 silent seconds after the last ayah
+    } else {
+      totalLengthSamples += sampleRate * 1; // 1 silent second after each other ayah
+    }
   });
 
   // Create the 1x merged buffer
@@ -789,8 +818,10 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
     }
     offset += buffer.length;
     if (index === buffers.length - 1) {
-      offset += sampleRate * 3;
-    } 
+      offset += sampleRate * 2;
+    } else {
+      offset += sampleRate * 1;
+    }
   });
 
   // If speed is 1, we are done
@@ -901,13 +932,12 @@ if (elements.speedBtns) {
       // OR we just update the playback rate of the current audio.
 
       if (elements.previewAudio) {
-        // If speed is baked in, playbackRate should be 1.
-        // If we want to change speed on the fly, we'd need to NOT bake it in.
-        // But the user specifically wanted it baked in for the download.
-
-        // For now, let's just update the UI and the native element's rate
-        // to show the user the speed is changing.
-        elements.previewAudio.playbackRate = 1; // Keep it at 1 because it's baked in!
+        const shouldConvertToWav = elements.convertToWavSwitch ? elements.convertToWavSwitch.checked : true;
+        if (shouldConvertToWav) {
+          elements.previewAudio.playbackRate = 1; // Keep at 1 because speed is baked into the custom WAV!
+        } else {
+          elements.previewAudio.playbackRate = speed; // Native browser speed adjustment for MP3
+        }
       }
 
       // Update active state
