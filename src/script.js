@@ -84,6 +84,7 @@ const elements = {
   selectAllBtn: document.getElementById("selectAllBtn"),
   deselectAllBtn: document.getElementById("deselectAllBtn"),
   clearAllBtn: document.getElementById("clearAllBtn"),
+  convertToWavSwitch: document.getElementById("convertToWavSwitch"),
 };
 
 // IndexedDB functions
@@ -376,6 +377,12 @@ async function applyUrlParams() {
     }
   }
 
+  // Load convertToWav selection from localStorage
+  const savedConvertToWav = localStorage.getItem("selectedConvertToWav");
+  if (savedConvertToWav !== null && elements.convertToWavSwitch) {
+    elements.convertToWavSwitch.checked = savedConvertToWav === "true";
+  }
+
   if (params.ss !== null) {
     elements.startSurahSelect.value = params.ss;
     await loadAyasForStartSurah();
@@ -664,6 +671,7 @@ async function downloadAudioSegment(triggerDownload = true) {
       window.AudioContext || window.webkitAudioContext
     )();
 
+    const shouldConvertToWav = elements.convertToWavSwitch ? elements.convertToWavSwitch.checked : false;
     const currentSpeed = parseFloat(
       document.querySelector(".speed-btn.active")?.dataset.speed || "1",
     );
@@ -727,9 +735,18 @@ async function downloadAudioSegment(triggerDownload = true) {
       currentSpeed,
     );
 
-    showStatus("جاري ترميز الملف بصيغة MP3...", "info");
-    const finalBlob = bufferToMp3(mergedBuffer);
-    const fileExtension = "mp3";
+    let finalBlob;
+    let fileExtension;
+
+    if (shouldConvertToWav) {
+      showStatus("جاري ترميز الملف بصيغة WAV...", "info");
+      finalBlob = bufferToWave(mergedBuffer);
+      fileExtension = "wav";
+    } else {
+      showStatus("جاري ترميز الملف بصيغة MP3...", "info");
+      finalBlob = bufferToMp3(mergedBuffer);
+      fileExtension = "mp3";
+    }
 
     const previewUrl = URL.createObjectURL(finalBlob);
 
@@ -824,10 +841,54 @@ async function mergeAudioBuffers(audioContext, buffers, speed = 1) {
   );
 }
 
+function bufferToWave(audioBuffer) {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const length = audioBuffer.length * numChannels * 2;
+  const buffer = new ArrayBuffer(44 + length);
+  const view = new DataView(buffer);
+
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++)
+      view.setUint8(offset + i, string.charCodeAt(i));
+  };
+
+  writeString(view, 0, "RIFF");
+  view.setUint32(4, 36 + length, true);
+  writeString(view, 8, "WAVE");
+  writeString(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, "data");
+  view.setUint32(40, length, true);
+
+  let offset = 44;
+  for (let i = 0; i < audioBuffer.length; i++) {
+    for (let channel = 0; channel < numChannels; channel++) {
+      let sample = Math.max(
+        -1,
+        Math.min(1, audioBuffer.getChannelData(channel)[i]),
+      );
+      view.setInt16(
+        offset,
+        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+        true,
+      );
+      offset += 2;
+    }
+  }
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
 function bufferToMp3(audioBuffer) {
   if (typeof lamejs === "undefined") {
     throw new Error(
-      "لم يتم تحميل مكتبة ترميز MP3. يرجى التحقق من الاتصال بالإنترنت.",
+      "لم يتم تحميل مكتبة ترميز MP3. يرجى التحقق من الاتصال بالإنترنت، أو تفعيل خيار التصدير بصيغة WAV.",
     );
   }
 
@@ -900,6 +961,12 @@ elements.startAyaSelect.addEventListener("change", () => {
 });
 elements.endAyaSelect.addEventListener("change", updateUrlParams);
 elements.downloadBtn.addEventListener("click", downloadAudioSegment);
+
+if (elements.convertToWavSwitch) {
+  elements.convertToWavSwitch.addEventListener("change", () => {
+    localStorage.setItem("selectedConvertToWav", elements.convertToWavSwitch.checked ? "true" : "false");
+  });
+}
 
 // Speed control listeners
 if (elements.speedBtns) {
